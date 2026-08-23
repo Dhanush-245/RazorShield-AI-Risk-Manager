@@ -22,6 +22,7 @@ import {
   LockKeyhole,
   Menu,
   Network,
+  Plus,
   RefreshCw,
   Search,
   Shield,
@@ -29,11 +30,12 @@ import {
   Sparkles,
   Target,
   X,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   getGetInvestigationQueryKey,
-  getGetRiskOverviewQueryKey,
   getGetRiskNetworkQueryKey,
+  getGetRiskOverviewQueryKey,
   getGetRiskTransactionQueryKey,
   getListAuditEventsQueryKey,
   getListRiskTransactionsQueryKey,
@@ -46,25 +48,24 @@ import {
   useListRiskTransactions,
 } from '@workspace/api-client-react';
 import type { AuditEvent, Investigation, RiskNetwork, RiskOverview, RiskTransaction } from '@workspace/api-client-react';
-import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
+import { Link, Route, Router as WouterRouter, Switch, useLocation, useParams } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
-
 type ReviewDecision = 'approve' | 'reject' | 'escalate' | 'request_evidence';
+type Tone = 'high' | 'medium' | 'low';
 
-const navItems = [
+const navItems: Array<{ href: string; label: string; icon: LucideIcon; exact?: boolean }> = [
   { href: '/', label: 'Risk posture', icon: LayoutDashboard, exact: true },
   { href: '/investigations', label: 'Investigations', icon: FileSearch },
   { href: '/network', label: 'Risk network', icon: Network },
   { href: '/chargebacks', label: 'Chargebacks', icon: ShieldAlert },
   { href: '/returns', label: 'Returns', icon: ArrowDownRight },
 ];
-
-const secondaryNav = [
+const secondaryNav: Array<{ href: string; label: string; icon: LucideIcon }> = [
   { href: '/audit', label: 'Audit trail', icon: History },
   { href: '/evaluation', label: 'Evaluation', icon: Gauge },
 ];
@@ -77,82 +78,76 @@ function formatMoney(value: number | undefined, currency = 'USD') {
   if (value === undefined || Number.isNaN(value)) return '—';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 2 }).format(value);
 }
-
 function formatCompact(value: number | undefined) {
   if (value === undefined || Number.isNaN(value)) return '—';
   return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
 }
-
 function formatTime(value?: string) {
   if (!value) return 'Unknown time';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date);
 }
-
 function formatDate(value?: string) {
   if (!value) return '—';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
 }
-
 function scoreValue(value: number | undefined) {
   if (value === undefined || Number.isNaN(value)) return 0;
   return Math.max(0, Math.min(100, value <= 1 ? value * 100 : value));
 }
-
 function scoreLabel(value: number | undefined) {
-  const normalized = scoreValue(value);
-  return `${normalized.toFixed(normalized % 1 ? 1 : 0)}`;
+  const score = scoreValue(value);
+  return score.toFixed(score % 1 ? 1 : 0);
 }
-
-function riskTone(level?: string, score?: number) {
+function riskTone(level?: string, score?: number): Tone {
   const value = (level ?? '').toLowerCase();
   if (value.includes('high') || value.includes('critical') || scoreValue(score) >= 75) return 'high';
   if (value.includes('medium') || value.includes('review') || scoreValue(score) >= 45) return 'medium';
   return 'low';
 }
+function toneColor(tone: Tone) {
+  return tone === 'high' ? 'var(--rust)' : tone === 'medium' ? 'var(--brass)' : 'var(--teal)';
+}
 
 function RiskBadge({ level, score }: { level?: string; score?: number }) {
   const tone = riskTone(level, score);
   return (
-    <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-[.13em]',
-      tone === 'high' && 'border-red-300/70 bg-red-50 text-red-700',
-      tone === 'medium' && 'border-amber-300/70 bg-amber-50 text-amber-700',
-      tone === 'low' && 'border-teal-300/70 bg-teal-50 text-teal-700')}>
-      <span className={cn('h-1.5 w-1.5 rounded-full', tone === 'high' ? 'bg-red-500' : tone === 'medium' ? 'bg-amber-500' : 'bg-teal-500')} />
+    <span data-testid={`status-risk-${tone}`} className={cn('risk-badge', tone === 'high' && 'risk-high', tone === 'medium' && 'risk-medium', tone === 'low' && 'risk-low')}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
       {level || tone}
     </span>
   );
 }
 
 function LoadingBlock({ className = '' }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-md bg-slate-200/80', className)} />;
+  return <div className={cn('skeleton-block', className)} />;
 }
 
 function QueryState({ error, onRetry, label = 'Unable to load this signal' }: { error?: boolean; onRetry: () => void; label?: string }) {
   if (!error) return null;
   return (
-    <div className="flex min-h-36 items-center justify-center rounded-lg border border-red-200 bg-red-50/60 p-6 text-center">
+    <div data-testid="status-query-error" className="bench-panel flex min-h-40 items-center justify-center p-6 text-center">
       <div>
-        <AlertCircle className="mx-auto mb-2 h-5 w-5 text-red-600" />
-        <p className="text-sm font-semibold text-red-900">{label}</p>
-        <p className="mt-1 text-xs text-red-700/80">The decision surface is still safe. Try the request again.</p>
-        <button data-testid="button-retry-query" onClick={onRetry} className="mt-3 inline-flex items-center gap-2 rounded-md border border-red-200 bg-card px-3 py-2 text-xs font-bold text-red-800 hover:bg-red-100">
-          <RefreshCw className="h-3.5 w-3.5" /> Retry
+        <AlertCircle className="mx-auto mb-2 h-5 w-5 text-[var(--rust)]" />
+        <p className="text-sm font-bold text-[var(--ink)]">{label}</p>
+        <p className="mt-1 text-xs text-[var(--muted-ink)]">The decision surface is safe. Try the request again.</p>
+        <button data-testid="button-retry-query" onClick={onRetry} className="bench-button mt-4">
+          <RefreshCw className="h-3.5 w-3.5" /> Retry request
         </button>
       </div>
     </div>
   );
 }
 
-function EmptyState({ title, body, icon: Icon = Database }: { title: string; body: string; icon?: typeof Database }) {
+function EmptyState({ title, body, icon: Icon = Database }: { title: string; body: string; icon?: LucideIcon }) {
   return (
-    <div className="flex min-h-44 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/50 p-8 text-center">
-      <div className="mb-3 rounded-full border border-border bg-secondary p-3 text-muted-foreground"><Icon className="h-5 w-5" /></div>
-      <p className="text-sm font-bold text-foreground">{title}</p>
-      <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">{body}</p>
+    <div className="empty-state">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center border border-[var(--line)] bg-[var(--panel-2)] text-[var(--muted-ink)]"><Icon className="h-5 w-5" /></div>
+      <p className="text-sm font-bold text-[var(--ink)]">{title}</p>
+      <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--muted-ink)]">{body}</p>
     </div>
   );
 }
@@ -160,23 +155,23 @@ function EmptyState({ title, body, icon: Icon = Database }: { title: string; bod
 function Header({ title, eyebrow, onMenu }: { title: string; eyebrow: string; onMenu: () => void }) {
   const [, setLocation] = useLocation();
   return (
-    <header className="flex min-h-[78px] items-center justify-between gap-4 border-b border-border bg-card/75 px-4 py-4 backdrop-blur-sm md:px-8">
-      <div className="flex min-w-0 items-center gap-3">
-        <button data-testid="button-open-navigation" onClick={onMenu} className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground md:hidden"><Menu className="h-5 w-5" /></button>
-        <div className="min-w-0">
-          <p className="font-mono-app text-[10px] font-bold uppercase tracking-[.18em] text-muted-foreground">{eyebrow}</p>
-          <h1 className="truncate text-xl font-bold tracking-[-.03em] text-foreground md:text-2xl">{title}</h1>
+    <header className="bench-header">
+      <div className="flex min-w-0 items-center">
+        <button data-testid="button-open-navigation" onClick={onMenu} className="mr-3 border-r border-[var(--line)] px-4 py-5 text-[var(--muted-ink)] hover:text-[var(--rust)] md:hidden"><Menu className="h-5 w-5" /></button>
+        <div className="min-w-0 px-4 py-4 md:px-7">
+          <p className="font-mono-app text-[9px] font-bold uppercase tracking-[.28em] text-[var(--rust)]">{eyebrow}</p>
+          <h1 className="mt-1 truncate font-display text-xl uppercase leading-none tracking-[-.02em] text-[var(--ink)] md:text-2xl">{title}</h1>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <div className="hidden items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs text-muted-foreground lg:flex">
-          <Command className="h-3.5 w-3.5" /><span>Quick find</span><span className="font-mono-app rounded border border-border px-1 text-[9px]">⌘ K</span>
+      <div className="flex items-center">
+        <div className="hidden items-center gap-2 border-l border-[var(--line)] px-5 py-4 font-mono-app text-[9px] uppercase tracking-[.18em] text-[var(--muted-ink)] lg:flex">
+          <Command className="h-3.5 w-3.5" /> Quick find <span className="border border-[var(--line)] px-1.5 py-0.5 text-[8px]">CMD K</span>
         </div>
-        <button data-testid="button-command-search" onClick={() => setLocation('/investigations')} className="rounded-md border border-border bg-background p-2 text-muted-foreground hover:border-primary/40 hover:text-primary lg:hidden"><Search className="h-4 w-4" /></button>
-        <div className="hidden h-8 w-px bg-border sm:block" />
-        <div className="flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">AR</span>
-          <span className="hidden text-xs font-semibold text-foreground sm:inline">A. Rivera</span>
+        <button data-testid="button-command-search" onClick={() => setLocation('/investigations')} className="border-l border-[var(--line)] p-5 text-[var(--muted-ink)] hover:text-[var(--rust)] lg:hidden"><Search className="h-4 w-4" /></button>
+        <div className="hidden h-8 w-px bg-[var(--line)] sm:block" />
+        <div className="mr-4 flex items-center gap-2 border-l border-[var(--line)] px-4 py-3 md:mr-6">
+          <span className="flex h-7 w-7 items-center justify-center bg-[var(--rust)] font-mono-app text-[10px] font-bold text-[var(--canvas)]">AR</span>
+          <span className="hidden font-mono-app text-[10px] uppercase tracking-wider text-[var(--ink)] sm:inline">A. Rivera</span>
         </div>
       </div>
     </header>
@@ -187,46 +182,38 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [location] = useLocation();
   return (
     <>
-      <div className={cn('fixed inset-0 z-30 bg-slate-950/40 backdrop-blur-sm md:hidden', !open && 'hidden')} onClick={onClose} />
-      <aside className={cn('fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-200 md:relative md:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}>
-        <div className="flex h-[78px] items-center justify-between border-b border-sidebar-border px-5">
+      <div className={cn('fixed inset-0 z-30 bg-black/60 md:hidden', !open && 'hidden')} onClick={onClose} />
+      <aside className={cn('bench-sidebar', open ? 'translate-x-0' : '-translate-x-full')}>
+        <div className="flex h-[77px] items-center justify-between border-b border-[var(--line)] px-5">
           <Link href="/" data-testid="link-brand-home" className="flex items-center gap-3" onClick={onClose}>
-            <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_0_0_4px_hsl(43_96%_58%/.12)]">
-              <Shield className="h-5 w-5" strokeWidth={2.5} />
-              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-teal-400" />
-            </div>
-            <div><p className="text-[15px] font-bold tracking-[-.03em] text-white">RazorShield</p><p className="font-mono-app text-[9px] uppercase tracking-[.18em] text-sidebar-foreground/55">Risk intelligence</p></div>
+            <span className="flex h-9 w-9 items-center justify-center bg-[var(--rust)] text-[var(--canvas)]"><Shield className="h-5 w-5" strokeWidth={2.5} /></span>
+            <span><strong className="font-display text-[17px] uppercase tracking-tight text-[var(--ink)]">RazorShield</strong><small className="mt-0.5 block font-mono-app text-[8px] uppercase tracking-[.2em] text-[var(--muted-ink)]">Risk foundry</small></span>
           </Link>
-          <button data-testid="button-close-navigation" onClick={onClose} className="rounded-md p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-white md:hidden"><X className="h-4 w-4" /></button>
+          <button data-testid="button-close-navigation" onClick={onClose} className="text-[var(--muted-ink)] hover:text-[var(--ink)] md:hidden"><X className="h-4 w-4" /></button>
         </div>
         <div className="px-3 pt-7">
-          <p className="px-3 pb-2 font-mono-app text-[9px] font-bold uppercase tracking-[.2em] text-sidebar-foreground/40">Command center</p>
+          <p className="rail-label px-3 pb-2">Command center</p>
           <nav className="space-y-1">
             {navItems.map((item) => {
               const active = item.exact ? location === item.href : location.startsWith(item.href);
               const Icon = item.icon;
-              return <Link key={item.href} href={item.href} onClick={onClose} data-testid={`link-nav-${item.label.toLowerCase().replaceAll(' ', '-')}`} className={cn('group flex items-center justify-between rounded-md px-3 py-2.5 text-sm font-semibold', active ? 'bg-sidebar-accent text-white' : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground')}>
-                <span className="flex items-center gap-3"><Icon className={cn('h-4 w-4', active ? 'text-sidebar-primary' : 'text-sidebar-foreground/45 group-hover:text-sidebar-foreground')} />{item.label}</span>
-                {item.label === 'Investigations' && <span className="rounded bg-sidebar-primary/15 px-1.5 py-0.5 font-mono-app text-[9px] text-sidebar-primary">LIVE</span>}
-              </Link>;
+              return <Link key={item.href} href={item.href} onClick={onClose} data-testid={`link-nav-${item.label.toLowerCase().replaceAll(' ', '-')}`} className={cn('nav-link', active && 'nav-link-active')}><span className="flex items-center gap-3"><Icon className="h-4 w-4" />{item.label}</span>{item.label === 'Investigations' && <span className="font-mono-app text-[8px] text-[var(--brass)]">LIVE</span>}</Link>;
             })}
           </nav>
-          <p className="px-3 pb-2 pt-8 font-mono-app text-[9px] font-bold uppercase tracking-[.2em] text-sidebar-foreground/40">Governance</p>
+          <p className="rail-label px-3 pb-2 pt-8">Governance</p>
           <nav className="space-y-1">
             {secondaryNav.map((item) => {
               const active = location.startsWith(item.href);
               const Icon = item.icon;
-              return <Link key={item.href} href={item.href} onClick={onClose} data-testid={`link-nav-${item.label.toLowerCase().replaceAll(' ', '-')}`} className={cn('flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold', active ? 'bg-sidebar-accent text-white' : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground')}>
-                <Icon className={cn('h-4 w-4', active ? 'text-sidebar-primary' : 'text-sidebar-foreground/45')} />{item.label}
-              </Link>;
+              return <Link key={item.href} href={item.href} onClick={onClose} data-testid={`link-nav-${item.label.toLowerCase().replaceAll(' ', '-')}`} className={cn('nav-link', active && 'nav-link-active')}><span className="flex items-center gap-3"><Icon className="h-4 w-4" />{item.label}</span></Link>;
             })}
           </nav>
         </div>
         <div className="mt-auto p-4">
-          <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3">
-            <div className="mb-2 flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-teal-400 shadow-[0_0_0_3px_hsl(164_42%_42%/.15)]" /><span className="font-mono-app text-[9px] font-bold uppercase tracking-[.16em] text-teal-300">Systems nominal</span></div>
-            <p className="text-[11px] leading-4 text-sidebar-foreground/55">All scoring pipelines reporting within expected latency.</p>
-            <div className="mt-3 flex items-center justify-between border-t border-sidebar-border pt-2 font-mono-app text-[9px] text-sidebar-foreground/40"><span>MODEL v3.8.2</span><LockKeyhole className="h-3 w-3" /></div>
+          <div className="border border-[var(--line)] bg-[var(--panel-2)] p-3">
+            <div className="mb-2 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[var(--teal)]" /><span className="font-mono-app text-[9px] font-bold uppercase tracking-[.16em] text-[var(--teal)]">Systems nominal</span></div>
+            <p className="text-[11px] leading-4 text-[var(--muted-ink)]">Scoring pipelines reporting within expected latency.</p>
+            <div className="mt-3 flex items-center justify-between border-t border-[var(--line)] pt-2 font-mono-app text-[9px] text-[var(--muted-ink)]"><span>MODEL V3.8.2</span><LockKeyhole className="h-3 w-3" /></div>
           </div>
         </div>
       </aside>
@@ -236,35 +223,26 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
 
 function Shell({ children, title, eyebrow }: { children: ReactNode; title: string; eyebrow: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  return <div className="noise-overlay risk-shell flex min-h-[100dvh] text-foreground">
-    <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
-    <div className="min-w-0 flex-1"><Header title={title} eyebrow={eyebrow} onMenu={() => setMenuOpen(true)} /><main className="mx-auto max-w-[1600px] p-4 md:p-8">{children}</main></div>
-  </div>;
+  return <div className="noise-overlay bench-grid flex min-h-[100dvh] text-[var(--ink)]"><Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} /><div className="min-w-0 flex-1"><Header title={title} eyebrow={eyebrow} onMenu={() => setMenuOpen(true)} /><main className="mx-auto max-w-[1640px] p-4 md:p-7 xl:p-9">{children}</main></div></div>;
 }
 
 function SectionHeading({ eyebrow, title, detail, action }: { eyebrow?: string; title: string; detail?: string; action?: ReactNode }) {
-  return <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div>{eyebrow && <p className="font-mono-app text-[10px] font-bold uppercase tracking-[.18em] text-primary">{eyebrow}</p>}<h2 className="mt-1 text-lg font-bold tracking-[-.025em] text-foreground">{title}</h2>{detail && <p className="mt-1 text-xs text-muted-foreground">{detail}</p>}</div>{action}</div>;
+  return <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div>{eyebrow && <p className="rail-label text-[var(--rust)]">{eyebrow}</p>}<h2 className="mt-1 font-display text-xl uppercase leading-none tracking-[-.015em] text-[var(--ink)]">{title}</h2>{detail && <p className="mt-2 text-xs text-[var(--muted-ink)]">{detail}</p>}</div>{action}</div>;
 }
 
-function MetricCard({ label, value, subtext, icon: Icon, tone = 'neutral', trend }: { label: string; value: string; subtext: string; icon: typeof Activity; tone?: 'neutral' | 'danger' | 'gold' | 'teal'; trend?: 'up' | 'down' }) {
-  return <div className="group rounded-lg border border-border bg-card p-4 shadow-[0_1px_2px_hsl(216_35%_16%/.04)] transition-transform hover:-translate-y-0.5">
-    <div className="flex items-start justify-between"><span className={cn('flex h-8 w-8 items-center justify-center rounded-md', tone === 'danger' ? 'bg-red-100 text-red-700' : tone === 'gold' ? 'bg-amber-100 text-amber-700' : tone === 'teal' ? 'bg-teal-100 text-teal-700' : 'bg-secondary text-muted-foreground')}><Icon className="h-4 w-4" /></span>{trend && <span className={cn('flex items-center gap-0.5 text-[10px] font-bold', trend === 'up' ? 'text-red-600' : 'text-teal-700')}>{trend === 'up' ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}7d</span>}</div>
-    <p className="mt-4 font-mono-app text-2xl font-bold tracking-[-.07em] text-foreground">{value}</p><p className="mt-1 text-xs font-semibold text-foreground">{label}</p><p className="mt-1 text-[11px] text-muted-foreground">{subtext}</p>
-  </div>;
+function MetricCard({ label, value, subtext, icon: Icon, tone = 'neutral', trend }: { label: string; value: string; subtext: string; icon: LucideIcon; tone?: 'neutral' | 'danger' | 'gold' | 'teal'; trend?: 'up' | 'down' }) {
+  return <div className="bench-panel group p-4 transition-transform hover:-translate-y-0.5"><div className="flex items-start justify-between"><span className={cn('flex h-8 w-8 items-center justify-center border', tone === 'danger' ? 'border-[var(--rust)]/60 bg-[var(--rust)]/10 text-[var(--rust)]' : tone === 'gold' ? 'border-[var(--brass)]/60 bg-[var(--brass)]/10 text-[var(--brass)]' : tone === 'teal' ? 'border-[var(--teal)]/60 bg-[var(--teal)]/10 text-[var(--teal)]' : 'border-[var(--line)] bg-[var(--panel-2)] text-[var(--muted-ink)]')}><Icon className="h-4 w-4" /></span>{trend && <span className={cn('flex items-center gap-0.5 font-mono-app text-[9px] font-bold', trend === 'up' ? 'text-[var(--rust)]' : 'text-[var(--teal)]')}>{trend === 'up' ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />} 7D</span>}</div><p className="mt-5 font-mono-app text-2xl font-bold tracking-[-.08em] text-[var(--ink)]">{value}</p><p className="mt-1 text-xs font-bold uppercase tracking-wide text-[var(--ink)]">{label}</p><p className="mt-1 text-[11px] text-[var(--muted-ink)]">{subtext}</p></div>;
 }
 
 function Sparkline({ trend }: { trend: Array<{ label: string; risk: number; volume: number }> }) {
   const values = trend.length ? trend.map((point) => point.risk) : [28, 34, 31, 40, 37, 43, 40];
   const max = Math.max(...values, 1); const min = Math.min(...values, 0); const span = Math.max(max - min, 1);
   const points = values.map((value, index) => `${(index / Math.max(values.length - 1, 1)) * 100},${94 - ((value - min) / span) * 70}`).join(' ');
-  return <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full" aria-label="Risk trend chart"><defs><linearGradient id="riskFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f4c84e" stopOpacity=".32" /><stop offset="1" stopColor="#f4c84e" stopOpacity="0" /></linearGradient></defs><polyline points={`0,100 ${points} 100,100`} fill="url(#riskFill)" stroke="none" /><polyline points={points} fill="none" stroke="#f4c84e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" /></svg>;
+  return <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full" aria-label="Risk trend chart"><defs><linearGradient id="riskFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="var(--rust)" stopOpacity=".32" /><stop offset="1" stopColor="var(--rust)" stopOpacity="0" /></linearGradient></defs><polyline points={`0,100 ${points} 100,100`} fill="url(#riskFill)" stroke="none" /><polyline points={points} fill="none" stroke="var(--rust)" strokeWidth="2.2" strokeLinecap="square" strokeLinejoin="miter" vectorEffect="non-scaling-stroke" /></svg>;
 }
 
 function TransactionRow({ transaction, selected, onSelect }: { transaction: RiskTransaction; selected?: boolean; onSelect: () => void }) {
-  return <button data-testid={`button-transaction-${transaction.transactionId}`} onClick={onSelect} className={cn('group w-full border-b border-border/80 px-4 py-3 text-left last:border-0 hover:bg-secondary/50', selected && 'bg-amber-50/70 shadow-[inset_3px_0_0_hsl(43_96%_58%)]')}>
-    <div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-2"><span className="font-mono-app text-xs font-bold text-foreground">{transaction.transactionId}</span><RiskBadge level={transaction.riskLevel} score={transaction.riskScore} /></div><span className="font-mono-app text-xs font-bold text-foreground">{formatMoney(transaction.amount, transaction.currency)}</span></div>
-    <div className="mt-2 flex items-center justify-between gap-3 text-[11px] text-muted-foreground"><span className="truncate">{transaction.customerId} <span className="px-1 text-border">/</span> {transaction.merchantId}</span><span>{formatTime(transaction.timestamp)}</span></div>
-  </button>;
+  return <button data-testid={`button-transaction-${transaction.transactionId}`} onClick={onSelect} className={cn('spec-row w-full px-4 py-3 text-left', selected && 'spec-row-active')}><div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-2"><span className="font-mono-app text-xs font-bold text-[var(--ink)]">{transaction.transactionId}</span><RiskBadge level={transaction.riskLevel} score={transaction.riskScore} /></div><span className="font-mono-app text-xs font-bold text-[var(--ink)]">{formatMoney(transaction.amount, transaction.currency)}</span></div><div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-[var(--muted-ink)]"><span className="truncate">{transaction.customerId}<span className="px-1 text-[var(--line)]">/</span>{transaction.merchantId}</span><span>{formatTime(transaction.timestamp)}</span></div></button>;
 }
 
 function OverviewPage() {
@@ -275,37 +253,34 @@ function OverviewPage() {
   const transactions = useMemo(() => transactionQuery.data ?? [], [transactionQuery.data]);
   const trend = overview?.trend ?? [];
   return <Shell title="Risk posture" eyebrow="Overview / Live posture">
-    <div className="rs-reveal mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div><p className="font-mono-app text-[10px] uppercase tracking-[.2em] text-muted-foreground">Wednesday, 23 October 2024</p><h2 className="mt-2 text-[28px] font-bold tracking-[-.055em] text-foreground md:text-4xl">Know the signal.<br /><span className="text-primary">Own the decision.</span></h2></div>
-      <button data-testid="button-refresh-overview" onClick={() => { void overviewQuery.refetch(); void transactionQuery.refetch(); }} className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs font-bold text-foreground hover:border-primary/40 hover:bg-secondary"><RefreshCw className={cn('h-3.5 w-3.5', overviewQuery.isFetching && 'animate-spin')} /> Refresh posture</button>
-    </div>
+    <div className="rs-reveal mb-7 flex flex-wrap items-end justify-between gap-4"><div><p className="font-mono-app text-[10px] uppercase tracking-[.26em] text-[var(--muted-ink)]">Inspection window / 23 OCT 2024</p><h2 className="mt-2 font-display text-4xl uppercase leading-[.88] tracking-[-.03em] text-[var(--ink)] md:text-6xl">Know the<br /><span className="text-[var(--rust)]">signal.</span> Own<br />the verdict.</h2></div><button data-testid="button-refresh-overview" onClick={() => { void overviewQuery.refetch(); void transactionQuery.refetch(); }} className="bench-button"><RefreshCw className={cn('h-3.5 w-3.5', overviewQuery.isFetching && 'animate-spin')} /> Refresh posture</button></div>
     <QueryState error={overviewQuery.isError} onRetry={() => void overviewQuery.refetch()} />
-    {overviewQuery.isLoading ? <div className="grid gap-4 lg:grid-cols-[1.35fr_repeat(4,1fr)]"><LoadingBlock className="h-44 lg:row-span-2" />{[1, 2, 3, 4].map((item) => <LoadingBlock key={item} className="h-44" />)}</div> : overview && <div className="grid gap-4 lg:grid-cols-[1.35fr_repeat(4,1fr)]">
-      <div className="relative overflow-hidden rounded-lg bg-primary p-5 text-primary-foreground shadow-[0_14px_28px_hsl(220_46%_26%/.18)] lg:row-span-2">
-        <div className="absolute -right-10 -top-16 h-48 w-48 rounded-full border-[24px] border-primary-foreground/5" /><div className="absolute -right-20 -top-6 h-64 w-64 rounded-full border border-primary-foreground/5" />
-        <div className="relative flex h-full flex-col justify-between"><div><div className="flex items-center justify-between"><p className="font-mono-app text-[10px] font-bold uppercase tracking-[.18em] text-primary-foreground/60">Current risk posture</p><span className="flex items-center gap-1.5 rounded-full bg-teal-400/15 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-teal-200"><span className="h-1.5 w-1.5 rounded-full bg-teal-300" />{overview.spikeStatus || 'Nominal'}</span></div><div className="mt-7 flex items-end gap-2"><span className="font-mono-app text-6xl font-bold tracking-[-.1em] text-sidebar-primary">{scoreLabel(overview.averageRiskScore)}</span><span className="mb-2 font-mono-app text-sm text-primary-foreground/55">/ 100</span></div><p className="mt-1 text-sm font-semibold text-primary-foreground/75">Average scored risk</p></div><div className="mt-10 border-t border-primary-foreground/10 pt-4"><div className="flex items-center justify-between text-[11px]"><span className="text-primary-foreground/55">Fraud rate</span><span className="font-mono-app font-bold text-sidebar-primary">{scoreValue(overview.fraudRate).toFixed(1)}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-primary-foreground/10"><div className="h-full rounded-full bg-sidebar-primary" style={{ width: `${Math.min(scoreValue(overview.fraudRate) * 4, 100)}%` }} /></div></div></div>
-      </div>
+    {overviewQuery.isLoading ? <div className="grid gap-3 lg:grid-cols-[1.3fr_repeat(4,1fr)]"><LoadingBlock className="h-48 lg:row-span-2" />{[1, 2, 3, 4].map((item) => <LoadingBlock key={item} className="h-48" />)}</div> : overview && <div className="grid gap-3 lg:grid-cols-[1.3fr_repeat(4,1fr)]">
+      <div className="relative overflow-hidden border border-[var(--rust)] bg-[var(--rust)] p-5 text-[var(--canvas)] lg:row-span-2"><div className="absolute -right-8 -top-12 h-52 w-52 border-[22px] border-[var(--canvas)]/10" /><div className="relative flex h-full flex-col justify-between"><div><div className="flex items-center justify-between gap-3"><p className="font-mono-app text-[9px] font-bold uppercase tracking-[.2em] text-[var(--canvas)]/65">Current risk posture</p><span className="flex items-center gap-1.5 border border-[var(--canvas)]/35 px-2 py-1 font-mono-app text-[9px] font-bold uppercase tracking-wider"><span className="h-1.5 w-1.5 rounded-full bg-[var(--teal)]" />{overview.spikeStatus || 'Nominal'}</span></div><div className="mt-8 flex items-end gap-2"><span className="font-display text-7xl leading-none tracking-[-.1em] text-[var(--canvas)]">{scoreLabel(overview.averageRiskScore)}</span><span className="mb-2 font-mono-app text-sm text-[var(--canvas)]/60">/ 100</span></div><p className="mt-1 text-sm font-bold uppercase tracking-wide text-[var(--canvas)]/75">Average scored risk</p></div><div className="mt-10 border-t border-[var(--canvas)]/20 pt-4"><div className="flex items-center justify-between text-[11px]"><span className="text-[var(--canvas)]/60">Fraud rate</span><span className="font-mono-app font-bold">{scoreValue(overview.fraudRate).toFixed(1)}%</span></div><div className="mt-2 h-1.5 bg-[var(--canvas)]/15"><div className="h-full bg-[var(--brass)]" style={{ width: `${Math.min(scoreValue(overview.fraudRate) * 4, 100)}%` }} /></div></div></div></div>
       <MetricCard label="High-risk events" value={formatCompact(overview.highRisk)} subtext="Require analyst review" icon={ShieldAlert} tone="danger" trend="up" />
       <MetricCard label="Fraud detected" value={formatCompact(overview.fraudDetected)} subtext="Confirmed in current window" icon={Fingerprint} tone="gold" />
       <MetricCard label="Loss prevented" value={formatMoney(overview.preventedLoss)} subtext="Defensive actions attributed" icon={Coins} tone="teal" trend="down" />
       <MetricCard label="Active investigations" value={formatCompact(overview.activeInvestigations)} subtext="Cases waiting for a decision" icon={FileSearch} />
     </div>}
-    <div className="mt-6 grid gap-6 xl:grid-cols-[1.45fr_1fr]">
-      <section className="rs-reveal rs-reveal-1 rounded-lg border border-border bg-card p-5">
-        <SectionHeading eyebrow="Signal over time" title="Risk intensity" detail="Seven-day movement across scored activity" action={<span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-700"><ArrowDownRight className="h-3 w-3" /> 4.8% vs prior window</span>} />
-        <div className="relative h-56 overflow-hidden rounded-md border border-border/70 bg-background hairline-grid"><div className="absolute inset-x-0 top-1/2 border-t border-dashed border-border" /><div className="absolute inset-x-0 bottom-4 top-4"><Sparkline trend={trend} /></div><div className="absolute inset-x-4 bottom-2 flex justify-between font-mono-app text-[9px] text-muted-foreground">{(trend.length ? trend : [{ label: 'Mon' }, { label: 'Tue' }, { label: 'Wed' }, { label: 'Thu' }, { label: 'Fri' }, { label: 'Sat' }, { label: 'Sun' }]).map((point, index) => <span key={`${point.label}-${index}`}>{point.label}</span>)}</div></div>
-      </section>
-      <section className="rs-reveal rs-reveal-2 rounded-lg border border-border bg-card p-5">
-        <SectionHeading eyebrow="Model telemetry" title="Signal composition" detail="What is driving current risk scores" />
-        <div className="space-y-4">{[['Behavioral pattern', 72, 'teal'], ['Velocity pressure', 51, 'amber'], ['Graph proximity', 38, 'navy'], ['Anomaly signature', 29, 'red']].map(([label, value, tone]) => <div key={label as string}><div className="mb-1.5 flex items-center justify-between text-xs"><span className="font-semibold">{label}</span><span className="font-mono-app text-muted-foreground">{value}%</span></div><div className="h-2 rounded-full bg-secondary"><div className={cn('h-full rounded-full', tone === 'teal' ? 'bg-teal-500' : tone === 'amber' ? 'bg-amber-400' : tone === 'red' ? 'bg-red-500' : 'bg-primary')} style={{ width: `${value}%` }} /></div></div>)}</div>
-        <div className="mt-6 flex items-center gap-2 border-t border-border pt-4 text-[11px] text-muted-foreground"><Sparkles className="h-3.5 w-3.5 text-primary" /> Explainability coverage <span className="ml-auto font-mono-app font-bold text-foreground">94.2%</span></div>
-      </section>
+    <div className="mt-6 grid gap-3 xl:grid-cols-[1.45fr_1fr]">
+      <section className="rs-reveal rs-reveal-1 bench-panel p-5"><SectionHeading eyebrow="Signal over time" title="Risk intensity" detail="Seven-day movement across scored activity" action={<span className="inline-flex items-center gap-1.5 font-mono-app text-[9px] font-bold uppercase tracking-wider text-[var(--teal)]"><ArrowDownRight className="h-3 w-3" /> 4.8% vs prior</span>} /><div className="relative h-56 overflow-hidden border border-[var(--line)] bg-[var(--canvas)] bench-grid"><div className="absolute inset-x-0 top-1/2 border-t border-dashed border-[var(--line)]" /><div className="absolute inset-x-4 bottom-7 top-4"><Sparkline trend={trend} /></div><div className="absolute inset-x-4 bottom-2 flex justify-between font-mono-app text-[9px] text-[var(--muted-ink)]">{(trend.length ? trend : [{ label: 'Mon' }, { label: 'Tue' }, { label: 'Wed' }, { label: 'Thu' }, { label: 'Fri' }, { label: 'Sat' }, { label: 'Sun' }]).map((point, index) => <span key={`${point.label}-${index}`}>{point.label}</span>)}</div></div></section>
+      <section className="rs-reveal rs-reveal-2 bench-panel p-5"><SectionHeading eyebrow="Model telemetry" title="Signal composition" detail="What is driving current risk scores" /><div className="space-y-4">{[['Behavioral pattern', 72, 'teal'], ['Velocity pressure', 51, 'brass'], ['Graph proximity', 38, 'rust'], ['Anomaly signature', 29, 'rust']].map(([label, value, tone]) => <div key={label as string}><div className="mb-1.5 flex items-center justify-between text-xs"><span className="font-bold">{label}</span><span className="font-mono-app text-[var(--muted-ink)]">{value}%</span></div><div className="h-2 bg-[var(--panel-2)]"><div className={cn('h-full', tone === 'teal' ? 'bg-[var(--teal)]' : tone === 'brass' ? 'bg-[var(--brass)]' : 'bg-[var(--rust)]')} style={{ width: `${value}%` }} /></div></div>)}</div><div className="mt-6 flex items-center gap-2 border-t border-[var(--line)] pt-4 text-[11px] text-[var(--muted-ink)]"><Sparkles className="h-3.5 w-3.5 text-[var(--brass)]" /> Explainability coverage <span className="ml-auto font-mono-app font-bold text-[var(--ink)]">94.2%</span></div></section>
     </div>
-    <section className="rs-reveal rs-reveal-3 mt-6 rounded-lg border border-border bg-card">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><p className="font-mono-app text-[10px] font-bold uppercase tracking-[.18em] text-primary">Live queue</p><h2 className="mt-1 text-lg font-bold tracking-[-.025em]">Recent activity</h2></div><Link href="/investigations" data-testid="link-view-all-investigations" className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70">View investigation queue <ChevronRight className="h-3.5 w-3.5" /></Link></div>
-      {transactionQuery.isLoading ? <div className="space-y-1 p-4">{[1, 2, 3].map((item) => <LoadingBlock key={item} className="h-14" />)}</div> : transactionQuery.isError ? <div className="p-4"><QueryState error onRetry={() => void transactionQuery.refetch()} /></div> : transactions.length ? <div>{transactions.slice(0, 5).map((transaction) => <TransactionRow key={transaction.transactionId} transaction={transaction} onSelect={() => setLocation(`/investigations?transaction=${transaction.transactionId}`)} />)}</div> : <div className="p-4"><EmptyState title="No scored activity yet" body="When transactions enter the risk engine, the latest events will appear here." /></div>}
-    </section>
+    <section className="rs-reveal rs-reveal-3 mt-6 bench-panel"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] p-5"><div><p className="rail-label text-[var(--rust)]">Live queue</p><h2 className="mt-1 font-display text-xl uppercase leading-none">Recent activity</h2></div><Link href="/investigations" data-testid="link-view-all-investigations" className="inline-flex items-center gap-1 font-mono-app text-[10px] font-bold uppercase tracking-wider text-[var(--rust)] hover:text-[var(--brass)]">Open investigation queue <ChevronRight className="h-3.5 w-3.5" /></Link></div>{transactionQuery.isLoading ? <div className="space-y-1 p-4">{[1, 2, 3].map((item) => <LoadingBlock key={item} className="h-14" />)}</div> : transactionQuery.isError ? <div className="p-4"><QueryState error onRetry={() => void transactionQuery.refetch()} /></div> : transactions.length ? <div>{transactions.slice(0, 5).map((transaction) => <TransactionRow key={transaction.transactionId} transaction={transaction} onSelect={() => setLocation(`/investigations?transaction=${transaction.transactionId}`)} />)}</div> : <div className="p-4"><EmptyState title="No scored activity yet" body="When transactions enter the risk engine, the latest events will appear here." /></div>}</section>
   </Shell>;
+}
+
+function ScoreMeter({ label, value }: { label: string; value?: number }) {
+  const score = scoreValue(value);
+  return <div className="border border-[var(--line)] bg-[var(--canvas)] p-3"><div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-[var(--muted-ink)]"><span>{label}</span><span className="font-mono-app text-[var(--ink)]">{score.toFixed(0)}</span></div><div className="mt-2 h-1.5 bg-[var(--panel-2)]"><div className="h-full" style={{ width: `${score}%`, backgroundColor: toneColor(score >= 70 ? 'high' : score >= 45 ? 'medium' : 'low') }} /></div></div>;
+}
+
+function BulletList({ title, items, tone }: { title: string; items: string[]; tone: 'teal' | 'amber' }) {
+  return <div><p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide"><span className={cn('h-1.5 w-1.5 rounded-full', tone === 'teal' ? 'bg-[var(--teal)]' : 'bg-[var(--brass)]')} />{title}</p>{items.length ? <ul className="space-y-2">{items.map((item, index) => <li key={`${item}-${index}`} className="flex gap-2 text-xs leading-5 text-[var(--muted-ink)]"><span className="font-mono-app text-[10px] text-[var(--rust)]">{String(index + 1).padStart(2, '0')}</span>{item}</li>)}</ul> : <p className="text-xs text-[var(--muted-ink)]">No signals recorded.</p>}</div>;
+}
+
+function DecisionButton({ label, icon: Icon, onClick, disabled, kind }: { label: string; icon: LucideIcon; onClick: () => void; disabled?: boolean; kind: 'approve' | 'reject' | 'escalate' | 'evidence' }) {
+  return <button data-testid={`button-decision-${kind}`} onClick={onClick} disabled={disabled} className={cn('decision-button', kind === 'approve' && 'decision-approve', kind === 'reject' && 'decision-reject', kind === 'escalate' && 'decision-escalate')}><Icon className="h-3.5 w-3.5" />{label}</button>;
 }
 
 function InvestigationDetail({ transactionId }: { transactionId?: string }) {
@@ -335,33 +310,18 @@ function InvestigationDetail({ transactionId }: { transactionId?: string }) {
   if (transactionQuery.isLoading || investigationQuery.isLoading) return <div className="space-y-4"><LoadingBlock className="h-36" /><LoadingBlock className="h-56" /><LoadingBlock className="h-44" /></div>;
   if (transactionQuery.isError || investigationQuery.isError) return <QueryState error onRetry={() => { void transactionQuery.refetch(); void investigationQuery.refetch(); }} label="Investigation evidence unavailable" />;
   return <div className="space-y-5">
-    <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><span className="font-mono-app text-xs font-bold text-primary">{transaction?.transactionId}</span><RiskBadge level={transaction?.riskLevel} score={transaction?.riskScore} /></div><h2 className="mt-2 text-2xl font-bold tracking-[-.04em]">Evidence review</h2><p className="mt-1 text-xs text-muted-foreground">{transaction?.customerId} · {transaction?.merchantId} · {formatTime(transaction?.timestamp)}</p></div><div className="text-right"><p className="font-mono-app text-3xl font-bold tracking-[-.08em] text-foreground">{scoreLabel(transaction?.riskScore)}</p><p className="font-mono-app text-[9px] uppercase tracking-[.16em] text-muted-foreground">Risk score / 100</p></div></div>
-    {feedback && <div data-testid="status-review-feedback" className={cn('flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold', feedback.type === 'success' ? 'border-teal-200 bg-teal-50 text-teal-800' : 'border-red-200 bg-red-50 text-red-800')}><span className="h-1.5 w-1.5 rounded-full bg-current" />{feedback.text}</div>}
-    <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
-      <div className="space-y-5">
-        <section className="rounded-lg border border-border bg-card p-5"><SectionHeading eyebrow="Model readout" title="What we know so far" detail="A plain-language account of the scored event" /><p className="text-[14px] leading-7 text-foreground/80">{investigation?.summary || 'The model has not supplied a written summary for this event.'}</p><div className="mt-5 grid gap-3 sm:grid-cols-3"><ScoreMeter label="Fraud probability" value={transaction?.fraudProbability} /><ScoreMeter label="Anomaly score" value={transaction?.anomalyScore} /><ScoreMeter label="Graph score" value={transaction?.graphScore} /></div></section>
-        <section className="rounded-lg border border-border bg-card p-5"><SectionHeading eyebrow="Signal ledger" title="Facts vs. inference" /><div className="grid gap-5 md:grid-cols-2"><BulletList title="Observed facts" items={investigation?.facts ?? transaction?.factors ?? []} tone="teal" /><BulletList title="Model inferences" items={investigation?.inferences ?? []} tone="amber" /></div></section>
-        <section className="rounded-lg border border-border bg-card p-5"><SectionHeading eyebrow="Source material" title="Evidence attached" detail="Inspect the source before taking action" />{investigation?.evidence?.length ? <div className="divide-y divide-border">{investigation.evidence.map((item, index) => <div key={`${item.label}-${index}`} data-testid={`evidence-item-${index}`} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"><div className="flex items-center gap-3"><div className="rounded-md bg-secondary p-2 text-muted-foreground"><Database className="h-4 w-4" /></div><div><p className="text-xs font-bold">{item.label}</p><p className="mt-0.5 text-[11px] text-muted-foreground">{item.source}</p></div></div><span className="font-mono-app text-[10px] text-foreground">{item.value}</span></div>)}</div> : <EmptyState title="No evidence attached" body="Request supporting evidence before finalizing this case." />}</section>
-      </div>
-      <div className="space-y-5">
-        <section className="rounded-lg border border-primary/30 bg-primary p-5 text-primary-foreground shadow-[0_14px_28px_hsl(220_46%_26%/.12)]"><div className="flex items-center justify-between"><p className="font-mono-app text-[10px] font-bold uppercase tracking-[.18em] text-sidebar-primary">Recommended action</p><Target className="h-4 w-4 text-sidebar-primary" /></div><p className="mt-4 text-xl font-bold tracking-[-.035em]">{investigation?.recommendation || 'Review required'}</p><div className="mt-6 border-t border-primary-foreground/10 pt-4"><div className="flex justify-between text-[11px]"><span className="text-primary-foreground/60">Model confidence</span><span className="font-mono-app font-bold text-sidebar-primary">{scoreValue(investigation?.confidence).toFixed(1)}%</span></div><div className="mt-2 h-1.5 rounded-full bg-primary-foreground/10"><div className="h-full rounded-full bg-sidebar-primary" style={{ width: `${scoreValue(investigation?.confidence)}%` }} /></div></div></section>
-        {investigation?.missingInformation?.length ? <section className="rounded-lg border border-amber-300/60 bg-amber-50 p-5"><div className="flex items-center gap-2 text-amber-800"><AlertCircle className="h-4 w-4" /><p className="font-mono-app text-[10px] font-bold uppercase tracking-[.16em]">Uncertainty to resolve</p></div><ul className="mt-3 space-y-2">{investigation.missingInformation.map((item, index) => <li key={`${item}-${index}`} className="flex gap-2 text-xs leading-5 text-amber-900"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-amber-600" />{item}</li>)}</ul></section> : null}
-        <section className="rounded-lg border border-border bg-card p-5"><SectionHeading eyebrow="Human control" title="Record a decision" detail="Your note becomes part of the case audit trail." /><textarea data-testid="input-review-note" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add context for the next analyst…" className="min-h-20 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-xs outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-ring/20" /><div className="mt-4 grid grid-cols-2 gap-2"><DecisionButton label="Approve" icon={Check} onClick={() => submit('approve')} disabled={review.isPending} kind="approve" /><DecisionButton label="Reject" icon={X} onClick={() => submit('reject')} disabled={review.isPending} kind="reject" /><DecisionButton label="Escalate" icon={Flag} onClick={() => submit('escalate')} disabled={review.isPending} kind="escalate" /><DecisionButton label="Request evidence" icon={FileSearch} onClick={() => submit('request_evidence')} disabled={review.isPending} kind="evidence" /></div>{review.isPending && <p className="mt-3 flex items-center gap-2 text-[11px] text-muted-foreground"><RefreshCw className="h-3 w-3 animate-spin" /> Recording your decision…</p>}</section>
-      </div>
-    </div>
+    <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><span className="font-mono-app text-xs font-bold text-[var(--rust)]">{transaction?.transactionId}</span><RiskBadge level={transaction?.riskLevel} score={transaction?.riskScore} /></div><h2 className="mt-2 font-display text-3xl uppercase leading-none">Evidence review</h2><p className="mt-2 text-xs text-[var(--muted-ink)]">{transaction?.customerId} / {transaction?.merchantId} / {formatTime(transaction?.timestamp)}</p></div><div className="text-right"><p className="font-display text-5xl leading-none tracking-[-.08em] text-[var(--ink)]">{scoreLabel(transaction?.riskScore)}</p><p className="mt-1 font-mono-app text-[9px] uppercase tracking-[.16em] text-[var(--muted-ink)]">Risk score / 100</p></div></div>
+    {feedback && <div data-testid="status-review-feedback" className={cn('flex items-center gap-2 border px-3 py-2 text-xs font-semibold', feedback.type === 'success' ? 'border-[var(--teal)]/60 bg-[var(--teal)]/10 text-[var(--teal)]' : 'border-[var(--rust)]/60 bg-[var(--rust)]/10 text-[var(--rust)]')}><span className="h-1.5 w-1.5 rounded-full bg-current" />{feedback.text}</div>}
+    <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]"><div className="space-y-5">
+      <section className="bench-panel p-5"><SectionHeading eyebrow="Model readout" title="What we know so far" detail="A plain-language account of the scored event" /><p className="text-[14px] leading-7 text-[var(--ink)]/80">{investigation?.summary || 'The model has not supplied a written summary for this event.'}</p><div className="mt-5 grid gap-3 sm:grid-cols-3"><ScoreMeter label="Fraud probability" value={transaction?.fraudProbability} /><ScoreMeter label="Anomaly score" value={transaction?.anomalyScore} /><ScoreMeter label="Graph score" value={transaction?.graphScore} /></div></section>
+      <section className="bench-panel p-5"><SectionHeading eyebrow="Signal ledger" title="Facts vs. inference" /><div className="grid gap-5 md:grid-cols-2"><BulletList title="Observed facts" items={investigation?.facts ?? transaction?.factors ?? []} tone="teal" /><BulletList title="Model inferences" items={investigation?.inferences ?? []} tone="amber" /></div></section>
+      <section className="bench-panel p-5"><SectionHeading eyebrow="Source material" title="Evidence attached" detail="Inspect the source before taking action" />{investigation?.evidence?.length ? <div className="divide-y divide-[var(--line)]">{investigation.evidence.map((item, index) => <div key={`${item.label}-${index}`} data-testid={`evidence-item-${index}`} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"><div className="flex items-center gap-3"><div className="border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--muted-ink)]"><Database className="h-4 w-4" /></div><div><p className="text-xs font-bold uppercase tracking-wide">{item.label}</p><p className="mt-0.5 text-[11px] text-[var(--muted-ink)]">{item.source}</p></div></div><span className="font-mono-app text-[10px] text-[var(--ink)]">{item.value}</span></div>)}</div> : <EmptyState title="No evidence attached" body="Request supporting evidence before finalizing this case." />}</section>
+    </div><div className="space-y-5">
+      <section className="relative overflow-hidden border border-[var(--rust)] bg-[var(--rust)] p-5 text-[var(--canvas)]"><div className="absolute -right-8 -top-8 h-28 w-28 border-[12px] border-[var(--canvas)]/10" /><div className="relative flex items-center justify-between"><p className="font-mono-app text-[10px] font-bold uppercase tracking-[.18em]">Recommended action</p><Target className="h-4 w-4 text-[var(--brass)]" /></div><p className="relative mt-5 font-display text-2xl uppercase leading-none">{investigation?.recommendation || 'Review required'}</p><div className="relative mt-7 border-t border-[var(--canvas)]/20 pt-4"><div className="flex justify-between text-[11px]"><span className="text-[var(--canvas)]/60">Model confidence</span><span className="font-mono-app font-bold">{scoreValue(investigation?.confidence).toFixed(1)}%</span></div><div className="mt-2 h-1.5 bg-[var(--canvas)]/15"><div className="h-full bg-[var(--brass)]" style={{ width: `${scoreValue(investigation?.confidence)}%` }} /></div></div></section>
+      {investigation?.missingInformation?.length ? <section className="border border-[var(--brass)]/70 bg-[var(--brass)]/10 p-5"><div className="flex items-center gap-2 text-[var(--brass)]"><AlertCircle className="h-4 w-4" /><p className="font-mono-app text-[10px] font-bold uppercase tracking-[.16em]">Uncertainty to resolve</p></div><ul className="mt-3 space-y-2">{investigation.missingInformation.map((item, index) => <li key={`${item}-${index}`} className="flex gap-2 text-xs leading-5 text-[var(--ink)]"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--brass)]" />{item}</li>)}</ul></section> : null}
+      <section className="bench-panel p-5"><SectionHeading eyebrow="Human control" title="Record a decision" detail="Your note becomes part of the case audit trail." /><textarea data-testid="input-review-note" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add context for the next analyst..." className="min-h-20 w-full resize-y border border-[var(--input-line)] bg-[var(--canvas)] px-3 py-2 text-xs text-[var(--ink)] outline-none placeholder:text-[var(--muted-ink)] focus:border-[var(--rust)]" /><div className="mt-4 grid grid-cols-2 gap-2"><DecisionButton label="Approve" icon={Check} onClick={() => submit('approve')} disabled={review.isPending} kind="approve" /><DecisionButton label="Reject" icon={X} onClick={() => submit('reject')} disabled={review.isPending} kind="reject" /><DecisionButton label="Escalate" icon={Flag} onClick={() => submit('escalate')} disabled={review.isPending} kind="escalate" /><DecisionButton label="Request evidence" icon={FileSearch} onClick={() => submit('request_evidence')} disabled={review.isPending} kind="evidence" /></div>{review.isPending && <p className="mt-3 flex items-center gap-2 text-[11px] text-[var(--muted-ink)]"><RefreshCw className="h-3 w-3 animate-spin" /> Recording your decision...</p>}</section>
+    </div></div>
   </div>;
-}
-
-function ScoreMeter({ label, value }: { label: string; value?: number }) {
-  const score = scoreValue(value); return <div className="rounded-md border border-border bg-background p-3"><div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><span>{label}</span><span className="font-mono-app text-foreground">{score.toFixed(0)}</span></div><div className="mt-2 h-1.5 rounded-full bg-secondary"><div className={cn('h-full rounded-full', score >= 70 ? 'bg-red-500' : score >= 45 ? 'bg-amber-400' : 'bg-teal-500')} style={{ width: `${score}%` }} /></div></div>;
-}
-
-function BulletList({ title, items, tone }: { title: string; items: string[]; tone: 'teal' | 'amber' }) {
-  return <div><p className="mb-3 flex items-center gap-2 text-xs font-bold"><span className={cn('h-1.5 w-1.5 rounded-full', tone === 'teal' ? 'bg-teal-500' : 'bg-amber-500')} />{title}</p>{items.length ? <ul className="space-y-2">{items.map((item, index) => <li key={`${item}-${index}`} className="flex gap-2 text-xs leading-5 text-muted-foreground"><span className="font-mono-app text-[10px] text-border">{String(index + 1).padStart(2, '0')}</span>{item}</li>)}</ul> : <p className="text-xs text-muted-foreground">No signals recorded.</p>}</div>;
-}
-
-function DecisionButton({ label, icon: Icon, onClick, disabled, kind }: { label: string; icon: typeof Check; onClick: () => void; disabled?: boolean; kind: 'approve' | 'reject' | 'escalate' | 'evidence' }) {
-  return <button data-testid={`button-decision-${kind}`} onClick={onClick} disabled={disabled} className={cn('flex items-center justify-center gap-1.5 rounded-md border px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider', kind === 'approve' ? 'border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100' : kind === 'reject' ? 'border-red-300 bg-red-50 text-red-800 hover:bg-red-100' : kind === 'escalate' ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100' : 'border-border bg-secondary text-foreground hover:bg-secondary/70')}><Icon className="h-3.5 w-3.5" />{label}</button>;
 }
 
 function InvestigationsPage() {
@@ -372,17 +332,10 @@ function InvestigationsPage() {
   const params = useParams<{ id?: string }>();
   const transactions = useMemo(() => transactionQuery.data ?? [], [transactionQuery.data]);
   useEffect(() => { const queryId = new URLSearchParams(window.location.search).get('transaction'); setSelectedId(params.id || queryId || transactions[0]?.transactionId); }, [params.id, transactions]);
-  const filtered = useMemo(() => transactions.filter((item) => {
-    const matchesSearch = !search || [item.transactionId, item.customerId, item.merchantId].some((field) => field.toLowerCase().includes(search.toLowerCase()));
-    const matchesFilter = filter === 'all' || riskTone(item.riskLevel, item.riskScore) === filter;
-    return matchesSearch && matchesFilter;
-  }), [transactions, search, filter]);
+  const filtered = useMemo(() => transactions.filter((item) => { const matchesSearch = !search || [item.transactionId, item.customerId, item.merchantId].some((field) => field.toLowerCase().includes(search.toLowerCase())); const matchesFilter = filter === 'all' || riskTone(item.riskLevel, item.riskScore) === filter; return matchesSearch && matchesFilter; }), [transactions, search, filter]);
   return <Shell title="Investigations" eyebrow="Analyst queue / Human review">
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="font-mono-app text-[10px] uppercase tracking-[.2em] text-primary">Signal to decision</p><h2 className="mt-1 text-2xl font-bold tracking-[-.04em]">Investigation queue</h2><p className="mt-1 text-xs text-muted-foreground">Review the highest-consequence events first. Every action is traceable.</p></div><div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs"><span className="h-1.5 w-1.5 rounded-full bg-teal-500" /><span className="font-mono-app font-bold">{transactions.length}</span><span className="text-muted-foreground">scored events</span></div></div>
-    {transactionQuery.isError ? <QueryState error onRetry={() => void transactionQuery.refetch()} /> : <div className="grid min-h-[680px] gap-5 xl:grid-cols-[380px_1fr]">
-      <section className="overflow-hidden rounded-lg border border-border bg-card"><div className="border-b border-border p-4"><div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><input data-testid="input-investigation-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search transaction, customer…" className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-xs outline-none focus:border-primary" /></div><div className="mt-3 flex items-center gap-1.5">{['all', 'high', 'medium', 'low'].map((item) => <button key={item} data-testid={`button-filter-${item}`} onClick={() => setFilter(item)} className={cn('rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider', filter === item ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground')}>{item}</button>)}</div></div><div className="max-h-[590px] overflow-y-auto">{transactionQuery.isLoading ? <div className="space-y-2 p-3">{[1, 2, 3, 4].map((item) => <LoadingBlock key={item} className="h-16" />)}</div> : filtered.length ? filtered.map((transaction) => <TransactionRow key={transaction.transactionId} transaction={transaction} selected={selectedId === transaction.transactionId} onSelect={() => setSelectedId(transaction.transactionId)} />) : <div className="p-4"><EmptyState title="No matching events" body="Adjust the search or filter to widen the queue." icon={Search} /></div>}</div><div className="border-t border-border bg-background px-4 py-3 text-[10px] text-muted-foreground">Showing {filtered.length} of {transactions.length} events</div></section>
-      <section><InvestigationDetail transactionId={selectedId} /></section>
-    </div>}
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><p className="rail-label text-[var(--rust)]">Signal to decision</p><h2 className="mt-1 font-display text-3xl uppercase leading-none">Investigation queue</h2><p className="mt-2 text-xs text-[var(--muted-ink)]">Review the highest-consequence events first. Every action is traceable.</p></div><div className="flex items-center gap-2 border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"><span className="h-1.5 w-1.5 rounded-full bg-[var(--teal)]" /><span className="font-mono-app font-bold">{transactions.length}</span><span className="font-mono-app text-[9px] uppercase text-[var(--muted-ink)]">scored events</span></div></div>
+    {transactionQuery.isError ? <QueryState error onRetry={() => void transactionQuery.refetch()} /> : <div className="grid min-h-[680px] gap-5 xl:grid-cols-[380px_1fr]"><section className="bench-panel overflow-hidden"><div className="border-b border-[var(--line)] p-4"><div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-[var(--muted-ink)]" /><input data-testid="input-investigation-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search transaction, customer..." className="h-9 w-full border border-[var(--input-line)] bg-[var(--canvas)] pl-9 pr-3 text-xs text-[var(--ink)] outline-none focus:border-[var(--rust)]" /></div><div className="mt-3 flex items-center gap-1.5">{['all', 'high', 'medium', 'low'].map((item) => <button key={item} data-testid={`button-filter-${item}`} onClick={() => setFilter(item)} className={cn('filter-button', filter === item && 'filter-active')}>{item}</button>)}</div></div><div className="max-h-[590px] overflow-y-auto">{transactionQuery.isLoading ? <div className="space-y-2 p-3">{[1, 2, 3, 4].map((item) => <LoadingBlock key={item} className="h-16" />)}</div> : filtered.length ? filtered.map((transaction) => <TransactionRow key={transaction.transactionId} transaction={transaction} selected={selectedId === transaction.transactionId} onSelect={() => setSelectedId(transaction.transactionId)} />) : <div className="p-4"><EmptyState title="No matching events" body="Adjust the search or filter to widen the queue." icon={Search} /></div>}</div><div className="border-t border-[var(--line)] bg-[var(--canvas)] px-4 py-3 font-mono-app text-[10px] text-[var(--muted-ink)]">Showing {filtered.length} of {transactions.length} events</div></section><section><InvestigationDetail transactionId={selectedId} /></section></div>}
   </Shell>;
 }
 
@@ -391,12 +344,9 @@ function NetworkPage() {
   const network = query.data as RiskNetwork | undefined;
   const [selected, setSelected] = useState<string>();
   return <Shell title="Risk network" eyebrow="Entity relationships / Exposure">
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="font-mono-app text-[10px] uppercase tracking-[.2em] text-primary">Connected risk</p><h2 className="mt-1 text-2xl font-bold tracking-[-.04em]">Suspicious entity network</h2><p className="mt-1 text-xs text-muted-foreground">See the relationships that a single event cannot explain.</p></div>{network && <div className="flex items-center gap-5 text-xs"><div><span className="font-mono-app font-bold">{network.nodes.length}</span><span className="ml-1.5 text-muted-foreground">entities</span></div><div><span className="font-mono-app font-bold">{network.clusterCount}</span><span className="ml-1.5 text-muted-foreground">clusters</span></div></div>}</div>
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><p className="rail-label text-[var(--rust)]">Connected risk</p><h2 className="mt-1 font-display text-3xl uppercase leading-none">Suspicious entity network</h2><p className="mt-2 text-xs text-[var(--muted-ink)]">See the relationships that a single event cannot explain.</p></div>{network && <div className="flex items-center gap-5 font-mono-app text-[10px] uppercase text-[var(--muted-ink)]"><div><span className="text-lg font-bold text-[var(--ink)]">{network.nodes.length}</span> entities</div><div><span className="text-lg font-bold text-[var(--ink)]">{network.clusterCount}</span> clusters</div></div>}</div>
     <QueryState error={query.isError} onRetry={() => void query.refetch()} />
-    {query.isLoading ? <div className="grid gap-5 lg:grid-cols-[1fr_300px]"><LoadingBlock className="h-[600px]" /><LoadingBlock className="h-[600px]" /></div> : network ? <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
-      <section className="relative min-h-[600px] overflow-hidden rounded-lg border border-border bg-card hairline-grid"><div className="absolute left-5 top-5 z-10 rounded-md border border-border bg-card/85 px-3 py-2 backdrop-blur-sm"><p className="font-mono-app text-[9px] uppercase tracking-[.16em] text-muted-foreground">Relationship map</p><p className="mt-1 text-xs font-bold">{network.links.length} active links</p></div><svg viewBox="0 0 900 600" className="absolute inset-0 h-full w-full"><g stroke="#c6cdd6" strokeWidth="1.5" strokeDasharray="4 5">{network.links.map((link, index) => { const sourceIndex = network.nodes.findIndex((node) => node.id === link.source); const targetIndex = network.nodes.findIndex((node) => node.id === link.target); const x1 = 130 + (Math.max(sourceIndex, 0) % 4) * 210; const y1 = 175 + (Math.floor(Math.max(sourceIndex, 0) / 4) % 3) * 145; const x2 = 130 + (Math.max(targetIndex, 0) % 4) * 210; const y2 = 175 + (Math.floor(Math.max(targetIndex, 0) / 4) % 3) * 145; return <line key={`${link.source}-${link.target}-${index}`} x1={x1} y1={y1} x2={x2} y2={y2} />; })}</g>{network.nodes.map((node, index) => { const x = 130 + (index % 4) * 210; const y = 175 + (Math.floor(index / 4) % 3) * 145; const tone = riskTone(undefined, node.risk); return <g key={node.id} className="cursor-pointer" onClick={() => setSelected(node.id)}><circle cx={x} cy={y} r={selected === node.id ? 31 : 26} fill={tone === 'high' ? '#fee2e2' : tone === 'medium' ? '#fef3c7' : '#ccfbf1'} stroke={tone === 'high' ? '#dc2626' : tone === 'medium' ? '#d97706' : '#0f766e'} strokeWidth={selected === node.id ? 3 : 1.5} /><circle cx={x} cy={y} r="4" fill={tone === 'high' ? '#dc2626' : tone === 'medium' ? '#d97706' : '#0f766e'} /><text x={x} y={y + 47} textAnchor="middle" className="fill-slate-700 text-[11px] font-semibold">{node.label}</text><text x={x} y={y + 61} textAnchor="middle" className="fill-slate-400 text-[9px]">{node.type} · {scoreLabel(node.risk)}</text></g>; })}</svg>{!network.nodes.length && <div className="absolute inset-0 flex items-center justify-center p-6"><EmptyState title="No connected entities" body="The graph will populate as relationship signals are scored." icon={Network} /></div>}</section>
-      <section className="rounded-lg border border-border bg-card p-5"><SectionHeading eyebrow="Selected entity" title={selected ? network.nodes.find((node) => node.id === selected)?.label || 'Entity detail' : 'Inspect the graph'} detail={selected ? 'Relationship risk profile' : 'Select a node to inspect'} />{selected ? (() => { const node = network.nodes.find((item) => item.id === selected); return <div className="space-y-4"><div className="rounded-md border border-border bg-background p-4"><p className="font-mono-app text-2xl font-bold">{scoreLabel(node?.risk)}</p><p className="mt-1 text-xs text-muted-foreground">Entity risk score</p><div className="mt-3"><RiskBadge score={node?.risk} level={riskTone(undefined, node?.risk)} /></div></div><div className="space-y-3 text-xs"><div className="flex justify-between border-b border-border pb-3"><span className="text-muted-foreground">Entity type</span><span className="font-semibold">{node?.type}</span></div><div className="flex justify-between border-b border-border pb-3"><span className="text-muted-foreground">Connections</span><span className="font-mono-app font-bold">{network.links.filter((link) => link.source === selected || link.target === selected).length}</span></div><div className="flex justify-between"><span className="text-muted-foreground">Entity ID</span><span className="font-mono-app text-[10px]">{node?.id}</span></div></div><Link href="/investigations" data-testid="link-network-investigate" className="flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary/90">Open investigation queue <ExternalLink className="h-3.5 w-3.5" /></Link></div>; })() : <div className="flex min-h-64 flex-col items-center justify-center text-center"><CircleDot className="h-6 w-6 text-muted-foreground" /><p className="mt-3 text-sm font-bold">One click from context</p><p className="mt-1 max-w-[210px] text-xs leading-5 text-muted-foreground">Select any entity in the map to reveal its score and connections.</p></div>}</section>
-    </div> : <EmptyState title="Network is quiet" body="No suspicious relationships are available for this window." icon={Network} />}
+    {query.isLoading ? <div className="grid gap-5 lg:grid-cols-[1fr_300px]"><LoadingBlock className="h-[600px]" /><LoadingBlock className="h-[600px]" /></div> : network ? <div className="grid gap-5 lg:grid-cols-[1fr_300px]"><section className="relative min-h-[600px] overflow-hidden border border-[var(--line)] bg-[var(--panel)] bench-grid"><div className="absolute left-5 top-5 z-10 border border-[var(--line)] bg-[var(--panel)]/90 px-3 py-2"><p className="rail-label">Relationship map</p><p className="mt-1 text-xs font-bold">{network.links.length} active links</p></div><svg viewBox="0 0 900 600" className="absolute inset-0 h-full w-full"><g stroke="var(--line-bright)" strokeWidth="1.5" strokeDasharray="4 5">{network.links.map((link, index) => { const sourceIndex = network.nodes.findIndex((node) => node.id === link.source); const targetIndex = network.nodes.findIndex((node) => node.id === link.target); const x1 = 130 + (Math.max(sourceIndex, 0) % 4) * 210; const y1 = 175 + (Math.floor(Math.max(sourceIndex, 0) / 4) % 3) * 145; const x2 = 130 + (Math.max(targetIndex, 0) % 4) * 210; const y2 = 175 + (Math.floor(Math.max(targetIndex, 0) / 4) % 3) * 145; return <line key={`${link.source}-${link.target}-${index}`} x1={x1} y1={y1} x2={x2} y2={y2} />; })}</g>{network.nodes.map((node, index) => { const x = 130 + (index % 4) * 210; const y = 175 + (Math.floor(index / 4) % 3) * 145; const tone = riskTone(undefined, node.risk); return <g key={node.id} className="cursor-pointer" onClick={() => setSelected(node.id)}><circle cx={x} cy={y} r={selected === node.id ? 31 : 26} fill="var(--panel-2)" stroke={toneColor(tone)} strokeWidth={selected === node.id ? 3 : 1.5} /><circle cx={x} cy={y} r="4" fill={toneColor(tone)} /><text x={x} y={y + 47} textAnchor="middle" className="fill-[var(--ink)] text-[11px] font-semibold">{node.label}</text><text x={x} y={y + 61} textAnchor="middle" className="fill-[var(--muted-ink)] text-[9px]">{node.type} / {scoreLabel(node.risk)}</text></g>; })}</svg>{!network.nodes.length && <div className="absolute inset-0 flex items-center justify-center p-6"><EmptyState title="No connected entities" body="The graph will populate as relationship signals are scored." icon={Network} /></div>}</section><section className="bench-panel p-5"><SectionHeading eyebrow="Selected entity" title={selected ? network.nodes.find((node) => node.id === selected)?.label || 'Entity detail' : 'Inspect the graph'} detail={selected ? 'Relationship risk profile' : 'Select a node to inspect'} />{selected ? (() => { const node = network.nodes.find((item) => item.id === selected); return <div className="space-y-4"><div className="border border-[var(--line)] bg-[var(--canvas)] p-4"><p className="font-display text-4xl">{scoreLabel(node?.risk)}</p><p className="mt-1 text-xs text-[var(--muted-ink)]">Entity risk score</p><div className="mt-3"><RiskBadge score={node?.risk} level={riskTone(undefined, node?.risk)} /></div></div><div className="space-y-3 text-xs"><div className="flex justify-between border-b border-[var(--line)] pb-3"><span className="text-[var(--muted-ink)]">Entity type</span><span className="font-semibold">{node?.type}</span></div><div className="flex justify-between border-b border-[var(--line)] pb-3"><span className="text-[var(--muted-ink)]">Connections</span><span className="font-mono-app font-bold">{network.links.filter((link) => link.source === selected || link.target === selected).length}</span></div><div className="flex justify-between"><span className="text-[var(--muted-ink)]">Entity ID</span><span className="font-mono-app text-[10px]">{node?.id}</span></div></div><Link href="/investigations" data-testid="link-network-investigate" className="flex items-center justify-center gap-2 bg-[var(--rust)] px-3 py-2.5 font-mono-app text-[10px] font-bold uppercase tracking-wider text-[var(--canvas)] hover:bg-[var(--brass)]">Open investigation queue <ExternalLink className="h-3.5 w-3.5" /></Link></div>; })() : <div className="flex min-h-64 flex-col items-center justify-center text-center"><CircleDot className="h-6 w-6 text-[var(--muted-ink)]" /><p className="mt-3 text-sm font-bold">One click from context</p><p className="mt-1 max-w-[210px] text-xs leading-5 text-[var(--muted-ink)]">Select any entity in the map to reveal its score and connections.</p></div>}</section></div> : <EmptyState title="Network is quiet" body="No suspicious relationships are available for this window." icon={Network} />}
   </Shell>;
 }
 
@@ -408,31 +358,26 @@ function SupportingView({ mode }: { mode: 'chargebacks' | 'returns' }) {
   useEffect(() => { if (!selectedId && candidates[0]) setSelectedId(candidates[0].transactionId); }, [candidates, selectedId]);
   const selected = candidates.find((item) => item.transactionId === selectedId);
   const title = mode === 'chargebacks' ? 'Chargeback evidence' : 'Return-risk support';
-  const eyebrow = mode === 'chargebacks' ? 'Dispute operations / Evidence' : 'Post-purchase / Supporting view';
-  return <Shell title={mode === 'chargebacks' ? 'Chargebacks' : 'Returns'} eyebrow={eyebrow}>
-    <div className="mb-6"><p className="font-mono-app text-[10px] uppercase tracking-[.2em] text-primary">{mode === 'chargebacks' ? 'Evidence review surface' : 'Behavioral risk surface'}</p><h2 className="mt-1 text-2xl font-bold tracking-[-.04em]">{title}</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">{mode === 'chargebacks' ? 'Bring the transaction, model rationale, and source evidence together before a dispute response is approved.' : 'Use existing risk signals to prioritize return-related events that may need a closer human look.'}</p></div>
-    {transactionQuery.isError ? <QueryState error onRetry={() => void transactionQuery.refetch()} /> : <div className="grid gap-5 lg:grid-cols-[minmax(290px,360px)_1fr]">
-      <section className="overflow-hidden rounded-lg border border-border bg-card"><div className="border-b border-border p-4"><div className="flex items-center justify-between"><span className="font-mono-app text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Priority set</span><span className="font-mono-app text-sm font-bold">{candidates.length}</span></div></div>{transactionQuery.isLoading ? <div className="space-y-2 p-3">{[1, 2, 3].map((item) => <LoadingBlock key={item} className="h-16" />)}</div> : candidates.length ? candidates.map((item) => <TransactionRow key={item.transactionId} transaction={item} selected={selectedId === item.transactionId} onSelect={() => setSelectedId(item.transactionId)} />) : <div className="p-4"><EmptyState title="No candidates in this window" body="This view only surfaces existing scored transaction signals." /></div>}</section>
-      <section className="rounded-lg border border-border bg-card p-5">{selected ? <SupportingDetail transaction={selected} mode={mode} /> : <EmptyState title="Nothing selected" body="Choose a transaction from the priority set to review its supporting signals." icon={FileSearch} />}</section>
-    </div>}
+  return <Shell title={mode === 'chargebacks' ? 'Chargebacks' : 'Returns'} eyebrow={mode === 'chargebacks' ? 'Dispute operations / Evidence' : 'Post-purchase / Supporting view'}>
+    <div className="mb-7"><p className="rail-label text-[var(--rust)]">{mode === 'chargebacks' ? 'Evidence review surface' : 'Behavioral risk surface'}</p><h2 className="mt-1 font-display text-3xl uppercase leading-none">{title}</h2><p className="mt-2 max-w-2xl text-xs leading-5 text-[var(--muted-ink)]">{mode === 'chargebacks' ? 'Bring the transaction, model rationale, and source evidence together before a dispute response is approved.' : 'Use existing risk signals to prioritize return-related events that may need a closer human look.'}</p></div>
+    {transactionQuery.isError ? <QueryState error onRetry={() => void transactionQuery.refetch()} /> : <div className="grid gap-5 lg:grid-cols-[minmax(290px,360px)_1fr]"><section className="bench-panel overflow-hidden"><div className="flex items-center justify-between border-b border-[var(--line)] p-4"><span className="rail-label">Priority set</span><span className="font-mono-app text-sm font-bold">{candidates.length}</span></div>{transactionQuery.isLoading ? <div className="space-y-2 p-3">{[1, 2, 3].map((item) => <LoadingBlock key={item} className="h-16" />)}</div> : candidates.length ? candidates.map((item) => <TransactionRow key={item.transactionId} transaction={item} selected={selectedId === item.transactionId} onSelect={() => setSelectedId(item.transactionId)} />) : <div className="p-4"><EmptyState title="No candidates in this window" body="This view only surfaces existing scored transaction signals." /></div>}</section><section className="bench-panel p-5">{selected ? <SupportingDetail transaction={selected} mode={mode} /> : <EmptyState title="Nothing selected" body="Choose a transaction from the priority set to review its supporting signals." icon={FileSearch} />}</section></div>}
   </Shell>;
 }
 
 function SupportingDetail({ transaction, mode }: { transaction: RiskTransaction; mode: 'chargebacks' | 'returns' }) {
-  return <div><div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5"><div><div className="flex items-center gap-2"><span className="font-mono-app text-xs font-bold text-primary">{transaction.transactionId}</span><RiskBadge level={transaction.riskLevel} score={transaction.riskScore} /></div><h3 className="mt-2 text-xl font-bold tracking-[-.035em]">{mode === 'chargebacks' ? 'Dispute evidence packet' : 'Return-risk signal packet'}</h3><p className="mt-1 text-xs text-muted-foreground">{formatMoney(transaction.amount, transaction.currency)} · {formatDate(transaction.timestamp)}</p></div><Link href={`/investigations/${transaction.transactionId}`} data-testid="link-open-supporting-investigation" className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs font-bold hover:border-primary/50"><FileSearch className="h-3.5 w-3.5" /> Full investigation</Link></div><div className="mt-6 grid gap-4 md:grid-cols-2"><div className="rounded-md border border-border bg-background p-4"><p className="font-mono-app text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Transaction context</p><dl className="mt-4 space-y-3 text-xs"><div className="flex justify-between gap-4"><dt className="text-muted-foreground">Customer</dt><dd className="font-mono-app font-bold">{transaction.customerId}</dd></div><div className="flex justify-between gap-4"><dt className="text-muted-foreground">Merchant</dt><dd className="font-mono-app font-bold">{transaction.merchantId}</dd></div><div className="flex justify-between gap-4"><dt className="text-muted-foreground">Decision</dt><dd className="font-semibold capitalize">{transaction.decision || 'Review'}</dd></div><div className="flex justify-between gap-4"><dt className="text-muted-foreground">Status</dt><dd className="font-semibold capitalize">{transaction.status || 'Open'}</dd></div></dl></div><div className="rounded-md border border-border bg-background p-4"><p className="font-mono-app text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Supporting scores</p><div className="mt-4 space-y-3"><ScoreMeter label="Behavior" value={transaction.behaviorScore} /><ScoreMeter label="Velocity" value={transaction.velocityScore} /><ScoreMeter label="Anomaly" value={transaction.anomalyScore} /></div></div></div><div className="mt-5 rounded-md border border-amber-200 bg-amber-50 p-4"><div className="flex items-center gap-2 text-amber-900"><AlertCircle className="h-4 w-4" /><p className="text-xs font-bold">Analyst checkpoint</p></div><p className="mt-2 text-xs leading-5 text-amber-900/80">Supporting views surface risk signals; they do not replace the evidence-backed decision workflow.</p></div><div className="mt-5"><p className="font-mono-app text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Factors on record</p><div className="mt-3 flex flex-wrap gap-2">{(transaction.factors ?? []).map((factor, index) => <span key={`${factor}-${index}`} className="rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px] font-semibold text-foreground">{factor}</span>)}</div></div></div>;
+  return <div><div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--line)] pb-5"><div><div className="flex items-center gap-2"><span className="font-mono-app text-xs font-bold text-[var(--rust)]">{transaction.transactionId}</span><RiskBadge level={transaction.riskLevel} score={transaction.riskScore} /></div><h3 className="mt-2 font-display text-2xl uppercase leading-none">{mode === 'chargebacks' ? 'Dispute evidence packet' : 'Return-risk signal packet'}</h3><p className="mt-2 text-xs text-[var(--muted-ink)]">{formatMoney(transaction.amount, transaction.currency)} / {formatDate(transaction.timestamp)}</p></div><Link href={`/investigations/${transaction.transactionId}`} data-testid="link-open-supporting-investigation" className="bench-button"><FileSearch className="h-3.5 w-3.5" /> Full investigation</Link></div><div className="mt-6 grid gap-4 md:grid-cols-2"><div className="border border-[var(--line)] bg-[var(--canvas)] p-4"><p className="rail-label">Transaction context</p><dl className="mt-4 space-y-3 text-xs"><div className="flex justify-between gap-4"><dt className="text-[var(--muted-ink)]">Customer</dt><dd className="font-mono-app font-bold">{transaction.customerId}</dd></div><div className="flex justify-between gap-4"><dt className="text-[var(--muted-ink)]">Merchant</dt><dd className="font-mono-app font-bold">{transaction.merchantId}</dd></div><div className="flex justify-between gap-4"><dt className="text-[var(--muted-ink)]">Decision</dt><dd className="font-semibold capitalize">{transaction.decision || 'Review'}</dd></div><div className="flex justify-between gap-4"><dt className="text-[var(--muted-ink)]">Status</dt><dd className="font-semibold capitalize">{transaction.status || 'Open'}</dd></div></dl></div><div className="border border-[var(--line)] bg-[var(--canvas)] p-4"><p className="rail-label">Supporting scores</p><div className="mt-4 space-y-3"><ScoreMeter label="Behavior" value={transaction.behaviorScore} /><ScoreMeter label="Velocity" value={transaction.velocityScore} /><ScoreMeter label="Anomaly" value={transaction.anomalyScore} /></div></div></div><div className="mt-5 border border-[var(--brass)]/70 bg-[var(--brass)]/10 p-4"><div className="flex items-center gap-2 text-[var(--brass)]"><AlertCircle className="h-4 w-4" /><p className="text-xs font-bold">Analyst checkpoint</p></div><p className="mt-2 text-xs leading-5 text-[var(--ink)]/75">Supporting views surface risk signals; they do not replace the evidence-backed decision workflow.</p></div><div className="mt-5"><p className="rail-label">Factors on record</p><div className="mt-3 flex flex-wrap gap-2">{(transaction.factors ?? []).map((factor, index) => <span key={`${factor}-${index}`} className="border border-[var(--line)] bg-[var(--panel-2)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)]">{factor}</span>)}</div></div></div>;
 }
 
 function AuditPage() {
   const query = useListAuditEvents();
   const events = useMemo(() => query.data ?? [], [query.data]);
   return <Shell title="Audit trail" eyebrow="Governance / Traceability">
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="font-mono-app text-[10px] uppercase tracking-[.2em] text-primary">Accountability by default</p><h2 className="mt-1 text-2xl font-bold tracking-[-.04em]">Decisions & human actions</h2><p className="mt-1 text-xs text-muted-foreground">A durable record of what happened, who acted, and which model version was in play.</p></div><div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs"><History className="h-3.5 w-3.5 text-primary" /><span className="font-mono-app font-bold">{events.length}</span><span className="text-muted-foreground">events</span></div></div>
-    {query.isError ? <QueryState error onRetry={() => void query.refetch()} /> : <section className="rounded-lg border border-border bg-card">{query.isLoading ? <div className="space-y-2 p-5">{[1, 2, 3, 4].map((item) => <LoadingBlock key={item} className="h-20" />)}</div> : events.length ? <div className="divide-y divide-border">{events.map((event) => <AuditRow key={event.id} event={event} />)}</div> : <div className="p-5"><EmptyState title="No audit events yet" body="Human decisions will appear here as analysts review cases." icon={History} /></div>}</section>}
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><p className="rail-label text-[var(--rust)]">Accountability by default</p><h2 className="mt-1 font-display text-3xl uppercase leading-none">Decisions & human actions</h2><p className="mt-2 text-xs text-[var(--muted-ink)]">A durable record of what happened, who acted, and which model version was in play.</p></div><div className="flex items-center gap-2 border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"><History className="h-3.5 w-3.5 text-[var(--rust)]" /><span className="font-mono-app font-bold">{events.length}</span><span className="font-mono-app text-[9px] uppercase text-[var(--muted-ink)]">events</span></div></div>
+    {query.isError ? <QueryState error onRetry={() => void query.refetch()} /> : <section className="bench-panel">{query.isLoading ? <div className="space-y-2 p-5">{[1, 2, 3, 4].map((item) => <LoadingBlock key={item} className="h-20" />)}</div> : events.length ? <div className="divide-y divide-[var(--line)]">{events.map((event) => <AuditRow key={event.id} event={event} />)}</div> : <div className="p-5"><EmptyState title="No audit events yet" body="Human decisions will appear here as analysts review cases." icon={History} /></div>}</section>}
   </Shell>;
 }
-
 function AuditRow({ event }: { event: AuditEvent }) {
-  return <div data-testid={`audit-event-${event.id}`} className="grid gap-3 p-5 md:grid-cols-[130px_1fr_190px] md:items-center"><div><p className="font-mono-app text-[10px] text-muted-foreground">{formatDate(event.timestamp)}</p><p className="mt-1 font-mono-app text-[10px] text-muted-foreground">{formatTime(event.timestamp).split(', ').pop()}</p></div><div className="flex items-start gap-3"><span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary text-primary"><BadgeCheck className="h-4 w-4" /></span><div><p className="text-sm font-bold">{event.event}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{event.note || 'No additional analyst note recorded.'}</p><p className="mt-2 font-mono-app text-[10px] text-muted-foreground">CASE {event.caseId}</p></div></div><div className="flex items-center justify-between gap-3 md:justify-end"><div className="text-right"><p className="text-xs font-bold">{event.actor}</p><p className="mt-1 font-mono-app text-[9px] text-muted-foreground">MODEL {event.decisionVersion}</p></div><ChevronRight className="h-4 w-4 text-border" /></div></div>;
+  return <div data-testid={`audit-event-${event.id}`} className="grid gap-3 p-5 md:grid-cols-[130px_1fr_190px] md:items-center"><div><p className="font-mono-app text-[10px] text-[var(--muted-ink)]">{formatDate(event.timestamp)}</p><p className="mt-1 font-mono-app text-[10px] text-[var(--muted-ink)]">{formatTime(event.timestamp).split(', ').pop()}</p></div><div className="flex items-start gap-3"><span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center border border-[var(--teal)]/40 bg-[var(--teal)]/10 text-[var(--teal)]"><BadgeCheck className="h-4 w-4" /></span><div><p className="text-sm font-bold">{event.event}</p><p className="mt-1 text-xs leading-5 text-[var(--muted-ink)]">{event.note || 'No additional analyst note recorded.'}</p><p className="mt-2 font-mono-app text-[10px] text-[var(--muted-ink)]">CASE {event.caseId}</p></div></div><div className="flex items-center justify-between gap-3 md:justify-end"><div className="text-right"><p className="text-xs font-bold">{event.actor}</p><p className="mt-1 font-mono-app text-[9px] text-[var(--muted-ink)]">MODEL {event.decisionVersion}</p></div><ChevronRight className="h-4 w-4 text-[var(--muted-ink)]" /></div></div>;
 }
 
 function EvaluationPage() {
@@ -444,41 +389,23 @@ function EvaluationPage() {
   const explainable = transactions.filter((item) => (item.factors?.length ?? 0) > 0).length;
   const explainability = transactions.length ? Math.round((explainable / transactions.length) * 100) : 0;
   return <Shell title="Evaluation" eyebrow="Model performance / Business impact">
-    <div className="mb-6"><p className="font-mono-app text-[10px] uppercase tracking-[.2em] text-primary">Held-out view</p><h2 className="mt-1 text-2xl font-bold tracking-[-.04em]">Does the model earn trust?</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">A compact read on performance and operational impact from the currently available scored set.</p></div>
+    <div className="mb-7"><p className="rail-label text-[var(--rust)]">Held-out view</p><h2 className="mt-1 font-display text-3xl uppercase leading-none">Does the model earn trust?</h2><p className="mt-2 max-w-2xl text-xs leading-5 text-[var(--muted-ink)]">A compact read on performance and operational impact from the currently available scored set.</p></div>
     <QueryState error={overviewQuery.isError || transactionQuery.isError} onRetry={() => { void overviewQuery.refetch(); void transactionQuery.refetch(); }} />
-    {overviewQuery.isLoading || transactionQuery.isLoading ? <div className="grid gap-5 md:grid-cols-2"><LoadingBlock className="h-64" /><LoadingBlock className="h-64" /><LoadingBlock className="h-56 md:col-span-2" /></div> : <div className="space-y-5">
-      <div className="grid gap-4 md:grid-cols-3"><MetricCard label="Average risk score" value={scoreLabel(overview?.averageRiskScore)} subtext="Across the scored window" icon={Gauge} tone="gold" /><MetricCard label="High-risk capture" value={transactions.length ? `${Math.round((highRisk / transactions.length) * 100)}%` : '—'} subtext={`${highRisk} events in the current set`} icon={Target} tone="danger" /><MetricCard label="Explainability coverage" value={`${explainability}%`} subtext="Events carrying factor evidence" icon={Sparkles} tone="teal" /></div>
-      <div className="grid gap-5 lg:grid-cols-[1fr_1fr]"><section className="rounded-lg border border-border bg-card p-5"><SectionHeading eyebrow="Performance frame" title="Held-out model readout" detail="Operational proxy from live scored events" /><div className="space-y-5"><EvalBar label="Signal coverage" value={Math.min(100, overview?.transactionsAnalyzed ? (transactions.length / overview.transactionsAnalyzed) * 100 : 0)} note={`${transactions.length} events sampled`} /><EvalBar label="Fraud rate in window" value={scoreValue(overview?.fraudRate)} note={`${formatCompact(overview?.fraudDetected)} confirmed detections`} /><EvalBar label="Risk concentration" value={transactions.length ? (highRisk / transactions.length) * 100 : 0} note={`${highRisk} high-risk events`} /></div></section><section className="rounded-lg border border-border bg-primary p-5 text-primary-foreground"><div className="flex items-center justify-between"><p className="font-mono-app text-[10px] font-bold uppercase tracking-[.18em] text-sidebar-primary">Business impact</p><Coins className="h-4 w-4 text-sidebar-primary" /></div><p className="mt-7 font-mono-app text-5xl font-bold tracking-[-.1em] text-sidebar-primary">{formatMoney(overview?.preventedLoss)}</p><p className="mt-2 text-sm font-semibold text-primary-foreground/75">Prevented loss attributed to defensive action</p><div className="mt-8 grid grid-cols-2 gap-3 border-t border-primary-foreground/10 pt-4"><div><p className="font-mono-app text-xl font-bold">{formatCompact(overview?.fraudDetected)}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-primary-foreground/55">Fraud detected</p></div><div><p className="font-mono-app text-xl font-bold">{formatCompact(overview?.activeInvestigations)}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-primary-foreground/55">Open reviews</p></div></div></section></div>
-      <section className="rounded-lg border border-amber-200 bg-amber-50 p-5"><div className="flex gap-3"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" /><div><p className="text-xs font-bold text-amber-900">Evaluation context</p><p className="mt-1 max-w-3xl text-xs leading-5 text-amber-900/75">The evaluation route is using the live scored set because no dedicated held-out evaluation endpoint is exposed in the current API contract. Treat these metrics as an operational snapshot, not a benchmark claim.</p></div></div></section>
-    </div>}
+    {overviewQuery.isLoading || transactionQuery.isLoading ? <div className="grid gap-5 md:grid-cols-2"><LoadingBlock className="h-64" /><LoadingBlock className="h-64" /><LoadingBlock className="h-56 md:col-span-2" /></div> : <div className="space-y-5"><div className="grid gap-3 md:grid-cols-3"><MetricCard label="Average risk score" value={scoreLabel(overview?.averageRiskScore)} subtext="Across the scored window" icon={Gauge} tone="gold" /><MetricCard label="High-risk capture" value={transactions.length ? `${Math.round((highRisk / transactions.length) * 100)}%` : '—'} subtext={`${highRisk} events in the current set`} icon={Target} tone="danger" /><MetricCard label="Explainability coverage" value={`${explainability}%`} subtext="Events carrying factor evidence" icon={Sparkles} tone="teal" /></div><div className="grid gap-5 lg:grid-cols-2"><section className="bench-panel p-5"><SectionHeading eyebrow="Performance frame" title="Held-out model readout" detail="Operational proxy from live scored events" /><div className="space-y-5"><EvalBar label="Signal coverage" value={Math.min(100, overview?.transactionsAnalyzed ? (transactions.length / overview.transactionsAnalyzed) * 100 : 0)} note={`${transactions.length} events sampled`} /><EvalBar label="Fraud rate in window" value={scoreValue(overview?.fraudRate)} note={`${formatCompact(overview?.fraudDetected)} confirmed detections`} /><EvalBar label="Risk concentration" value={transactions.length ? (highRisk / transactions.length) * 100 : 0} note={`${highRisk} high-risk events`} /></div></section><section className="relative overflow-hidden border border-[var(--rust)] bg-[var(--rust)] p-5 text-[var(--canvas)]"><div className="flex items-center justify-between"><p className="font-mono-app text-[10px] font-bold uppercase tracking-[.18em]">Business impact</p><Coins className="h-4 w-4 text-[var(--brass)]" /></div><p className="mt-7 font-display text-5xl tracking-[-.1em]">{formatMoney(overview?.preventedLoss)}</p><p className="mt-2 text-sm font-bold uppercase tracking-wide text-[var(--canvas)]/75">Prevented loss attributed to defensive action</p><div className="mt-8 grid grid-cols-2 gap-3 border-t border-[var(--canvas)]/20 pt-4"><div><p className="font-mono-app text-xl font-bold">{formatCompact(overview?.fraudDetected)}</p><p className="mt-1 font-mono-app text-[10px] uppercase tracking-wider text-[var(--canvas)]/55">Fraud detected</p></div><div><p className="font-mono-app text-xl font-bold">{formatCompact(overview?.activeInvestigations)}</p><p className="mt-1 font-mono-app text-[10px] uppercase tracking-wider text-[var(--canvas)]/55">Open reviews</p></div></div></section></div><section className="border border-[var(--brass)]/70 bg-[var(--brass)]/10 p-5"><div className="flex gap-3"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brass)]" /><div><p className="text-xs font-bold text-[var(--brass)]">Evaluation context</p><p className="mt-1 max-w-3xl text-xs leading-5 text-[var(--ink)]/75">The evaluation route is using the live scored set because no dedicated held-out evaluation endpoint is exposed in the current API contract. Treat these metrics as an operational snapshot, not a benchmark claim.</p></div></div></section></div>}
   </Shell>;
 }
-
 function EvalBar({ label, value, note }: { label: string; value: number; note: string }) {
-  return <div><div className="mb-2 flex items-end justify-between gap-3"><div><p className="text-xs font-bold">{label}</p><p className="mt-1 text-[11px] text-muted-foreground">{note}</p></div><span className="font-mono-app text-sm font-bold">{value.toFixed(1)}%</span></div><div className="h-2 rounded-full bg-secondary"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, value))}%` }} /></div></div>;
+  return <div><div className="mb-2 flex items-end justify-between gap-3"><div><p className="text-xs font-bold">{label}</p><p className="mt-1 text-[11px] text-[var(--muted-ink)]">{note}</p></div><span className="font-mono-app text-sm font-bold">{value.toFixed(1)}%</span></div><div className="h-2 bg-[var(--panel-2)]"><div className="h-full bg-[var(--rust)]" style={{ width: `${Math.min(100, Math.max(0, value))}%` }} /></div></div>;
 }
 
 function Router() {
-  return <RoutedErrorBoundary><Switch>
-    <Route path="/" component={OverviewPage} />
-    <Route path="/investigations" component={InvestigationsPage} />
-    <Route path="/investigations/:id" component={InvestigationsPage} />
-    <Route path="/network" component={NetworkPage} />
-    <Route path="/chargebacks" component={() => <SupportingView mode="chargebacks" />} />
-    <Route path="/returns" component={() => <SupportingView mode="returns" />} />
-    <Route path="/audit" component={AuditPage} />
-    <Route path="/evaluation" component={EvaluationPage} />
-    <Route component={NotFound} />
-  </Switch></RoutedErrorBoundary>;
+  return <RoutedErrorBoundary><Switch><Route path="/" component={OverviewPage} /><Route path="/investigations" component={InvestigationsPage} /><Route path="/investigations/:id" component={InvestigationsPage} /><Route path="/network" component={NetworkPage} /><Route path="/chargebacks" component={() => <SupportingView mode="chargebacks" />} /><Route path="/returns" component={() => <SupportingView mode="returns" />} /><Route path="/audit" component={AuditPage} /><Route path="/evaluation" component={EvaluationPage} /><Route component={NotFound} /></Switch></RoutedErrorBoundary>;
 }
-
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
-
 function App() {
   return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>;
 }
-
 export default App;
