@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "qsOeI1ot2BUh-pB-3MWAd"
+uri = "file://.conversation/docs/PHASE_0_PROJECT_DEFINITION.md"
+type = "text"
+title = "RazorShield AI — Phase 0 Project Definition"
+description = "The initial project definition covering scope, architecture, evaluation, safety, roadmap, demo plan, and definition of done."
+logical_id = "7c6a2039-7f15-4a6f-aa2c-97872c0618cc"
+content_hash = "sha256:5f3445aed817df1930b4eeac56b5e2501167f9f7a7a949d038e91acd5cf9cd30"
+size = 15897
+mtime_ms = 1787461604606
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/conversation:386bf3d3-4029-47cd-ba1b-a036db551143/7c6a2039-7f15-4a6f-aa2c-97872c0618cc/3ddaba54-f877-48f3-9401-23dde5894124"
+storage_version_token = "1787461610937964"
+content_type = "text/markdown"

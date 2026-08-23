@@ -1,0 +1,1 @@
+- [API codegen compatibility](api-codegen-compatibility.md) — OpenAPI integer fields currently generate an incompatible Zod helper; validate compatibility after schema changes.

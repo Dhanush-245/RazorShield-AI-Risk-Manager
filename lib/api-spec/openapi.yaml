@@ -10,6 +10,12 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: risk
+    description: Risk intelligence operations
+  - name: review
+    description: Human review operations
+  - name: audit
+    description: Decision audit operations
 paths:
   /healthz:
     get:
@@ -24,6 +30,120 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /risk/overview:
+    get:
+      operationId: getRiskOverview
+      tags: [risk]
+      summary: Get risk dashboard overview
+      responses:
+        "200":
+          description: Risk overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskOverview"
+  /risk/transactions:
+    get:
+      operationId: listRiskTransactions
+      tags: [risk]
+      summary: List scored transactions
+      responses:
+        "200":
+          description: Scored transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskTransaction"
+  /risk/transactions/{transactionId}:
+    get:
+      operationId: getRiskTransaction
+      tags: [risk]
+      summary: Get a scored transaction
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scored transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskTransaction"
+        "404":
+          description: Not found
+  /investigations/{transactionId}:
+    get:
+      operationId: getInvestigation
+      tags: [risk]
+      summary: Get an evidence-grounded investigation
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Investigation report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Investigation"
+  /risk/network:
+    get:
+      operationId: getRiskNetwork
+      tags: [risk]
+      summary: Get suspicious entity network
+      responses:
+        "200":
+          description: Entity network
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskNetwork"
+  /risk/reviews/{caseId}/decision:
+    post:
+      operationId: decideReview
+      tags: [review]
+      summary: Record a human review decision
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecisionInput"
+      responses:
+        "200":
+          description: Recorded decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditEvent"
+  /risk/audit:
+    get:
+      operationId: listAuditEvents
+      tags: [audit]
+      summary: List recent audit events
+      responses:
+        "200":
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEvent"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +153,128 @@ components:
           type: string
       required:
         - status
+    RiskOverview:
+      type: object
+      required: [transactionsAnalyzed, highRisk, fraudDetected, preventedLoss, activeInvestigations, averageRiskScore, fraudRate, spikeStatus, trend]
+      properties:
+        transactionsAnalyzed: { type: number }
+        highRisk: { type: number }
+        fraudDetected: { type: number }
+        preventedLoss: { type: number }
+        activeInvestigations: { type: number }
+        averageRiskScore: { type: number }
+        fraudRate: { type: number }
+        spikeStatus: { type: string }
+        trend:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendPoint"
+    TrendPoint:
+      type: object
+      required: [label, risk, volume]
+      properties:
+        label: { type: string }
+        risk: { type: number }
+        volume: { type: number }
+    RiskTransaction:
+      type: object
+      required: [transactionId, customerId, merchantId, amount, currency, timestamp, riskScore, riskLevel, fraudProbability, anomalyScore, behaviorScore, velocityScore, graphScore, decision, status, factors]
+      properties:
+        transactionId: { type: string }
+        customerId: { type: string }
+        merchantId: { type: string }
+        amount: { type: number }
+        currency: { type: string }
+        timestamp: { type: string }
+        riskScore: { type: number }
+        riskLevel: { type: string }
+        fraudProbability: { type: number }
+        anomalyScore: { type: number }
+        behaviorScore: { type: number }
+        velocityScore: { type: number }
+        graphScore: { type: number }
+        decision: { type: string }
+        status: { type: string }
+        factors:
+          type: array
+          items:
+            type: string
+    Investigation:
+      type: object
+      required: [transaction, summary, confidence, recommendation, missingInformation, facts, inferences, recommendations, evidence]
+      properties:
+        transaction:
+          $ref: "#/components/schemas/RiskTransaction"
+        summary: { type: string }
+        confidence: { type: number }
+        recommendation: { type: string }
+        missingInformation:
+          type: array
+          items: { type: string }
+        facts:
+          type: array
+          items: { type: string }
+        inferences:
+          type: array
+          items: { type: string }
+        recommendations:
+          type: array
+          items: { type: string }
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvidenceItem"
+    EvidenceItem:
+      type: object
+      required: [label, value, source]
+      properties:
+        label: { type: string }
+        value: { type: string }
+        source: { type: string }
+    RiskNetwork:
+      type: object
+      required: [nodes, links, clusterCount]
+      properties:
+        clusterCount: { type: number }
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NetworkNode"
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/NetworkLink"
+    NetworkNode:
+      type: object
+      required: [id, label, type, risk]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        type: { type: string }
+        risk: { type: number }
+    NetworkLink:
+      type: object
+      required: [source, target]
+      properties:
+        source: { type: string }
+        target: { type: string }
+    ReviewDecisionInput:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject, escalate, request_evidence]
+        note: { type: string }
+    AuditEvent:
+      type: object
+      required: [id, caseId, timestamp, event, actor, decisionVersion]
+      properties:
+        id: { type: string }
+        caseId: { type: string }
+        timestamp: { type: string }
+        event: { type: string }
+        actor: { type: string }
+        note: { type: string }
+        decisionVersion: { type: string }
 

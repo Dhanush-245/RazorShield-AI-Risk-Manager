@@ -1,6 +1,6 @@
-# [Project name]
+# RazorShield AI
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Defense-only merchant risk intelligence for detecting suspicious transactions, investigating evidence, approving bounded actions, and auditing every decision.
 
 ## Run & Operate
 
@@ -22,23 +22,35 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/razorshield-ai/src/App.tsx` — dashboard routes and analyst workflow
+- `artifacts/razorshield-ai/src/index.css` — application theme and interaction tokens
+- `artifacts/api-server/src/routes/risk.ts` — demo risk, investigation, network, review, and audit API
+- `lib/api-spec/openapi.yaml` — source of truth for the API contract
+- `docs/PHASE_0_PROJECT_DEFINITION.md` — product scope, safety boundaries, and roadmap
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The first working slice uses a typed OpenAPI contract and a deterministic, clearly labeled demo dataset so the complete workflow is demonstrable before connecting a production model.
+- The LLM/investigator surface is evidence-grounded and separates facts, inferences, and recommendations; missing evidence is explicit.
+- Review actions are bounded to analyst decisions and are recorded in the audit stream; no payment execution or control-bypass capability exists.
+- Supporting modules are presented as risk signals, not as proof of fraud, and evaluation language distinguishes scored-set snapshots from held-out model experiments.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Overview of merchant risk posture, spike status, and recent activity
+- Transaction investigation queue with evidence, model signals, and human review decisions
+- Entity network view for shared-device and relationship risk
+- Chargeback evidence and return-risk supporting views
+- Audit center and transparent evaluation/business impact surfaces
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+The user asked for the full RazorShield AI project, built phase-by-phase from the attached specification.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Keep API changes in `lib/api-spec/openapi.yaml`, then run `pnpm --filter @workspace/api-spec run codegen`.
+- Artifact build commands need workflow-provided `PORT` and `BASE_PATH`; use the managed web workflow for the preview.
 
 ## Pointers
 

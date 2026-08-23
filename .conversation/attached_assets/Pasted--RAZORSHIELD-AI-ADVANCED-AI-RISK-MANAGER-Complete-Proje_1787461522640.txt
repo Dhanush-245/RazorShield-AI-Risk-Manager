@@ -1,0 +1,2172 @@
+# RAZORSHIELD AI — ADVANCED AI RISK MANAGER
+
+## Complete Project Specification and Development Master Prompt
+
+You are an expert AI/ML architect, fraud-risk engineer, data scientist, generative-AI engineer, agentic-AI engineer, backend engineer, and hackathon mentor.
+
+Help me build a production-oriented, advanced AI Risk Manager called **RazorShield AI** for the Razorpay Buildathon **Track 02 — AI Risk Manager**.
+
+The official problem is:
+
+> **Stop the merchant losing money to fraud, returns and chargebacks.**
+
+The official track requires:
+
+> Build a working detector, verifier, or auto-responder for one class of loss, with measured precision and recall on a held-out test set.
+
+The official example directions are:
+
+1. Chargeback evidence responder
+2. Return-risk scorer
+3. Fraud-spike detector
+4. Abuse-ring sentinel
+
+The project must remain **strictly defense-only**. Do not build, recommend, or implement anything that enables fraud, payment abuse, evasion, exploitation, attack automation, or bypassing risk controls.
+
+---
+
+# 1. PROJECT VISION
+
+Build RazorShield AI as an advanced merchant-risk intelligence system that helps merchants detect, investigate, explain, prioritize, and respond to financial risk.
+
+The system should not be merely a fraud-classification model.
+
+The complete concept is:
+
+> **Detect → Investigate → Explain → Assess → Recommend → Human Approval → Act → Audit**
+
+The primary measurable objective should be **fraud-related loss prevention**, while the other official Track 02 directions become supporting intelligence modules.
+
+The project should demonstrate how multiple AI/ML techniques can work together as one coherent risk-management system.
+
+---
+
+# 2. CORE PROJECT IDEA
+
+RazorShield AI receives transaction, customer, merchant, device, behavioral, return, and chargeback information.
+
+It analyzes the information using multiple layers:
+
+* Supervised fraud detection
+* Unsupervised anomaly detection
+* Behavioral analysis
+* Transaction velocity analysis
+* Risk rules
+* Graph/entity relationship analysis
+* Return-risk prediction
+* Chargeback evidence analysis
+* Explainable AI
+* Evidence-grounded LLM investigation
+* Risk fusion
+* Bounded defensive AI agent
+* Human-in-the-loop approval
+* Audit logging
+
+The final system should generate a transparent risk assessment.
+
+Example:
+
+Transaction:
+
+TX_10982
+
+Risk Score:
+
+93/100
+
+Fraud Probability:
+
+0.94
+
+Anomaly Score:
+
+0.89
+
+Abuse-Ring Score:
+
+0.82
+
+Decision:
+
+HIGH RISK — MANUAL REVIEW
+
+Reasons:
+
+1. Transaction amount is significantly outside the customer's normal behavior.
+2. A new device was detected.
+3. Transaction velocity is unusually high.
+4. The device is associated with multiple suspicious accounts.
+5. Recent failed transactions increase the risk.
+
+Recommended defensive action:
+
+Temporarily hold the transaction and request additional verification.
+
+The system must also preserve the evidence and decision in an audit trail.
+
+---
+
+# 3. IMPORTANT ARCHITECTURAL PRINCIPLE
+
+Do NOT build four disconnected mini-projects.
+
+Build ONE integrated AI Risk Manager.
+
+The four official directions should have different roles:
+
+### Primary measurable objective
+
+**Fraud-Spike Detector**
+
+This is the main fraud/loss detection task and should receive rigorous held-out evaluation.
+
+### Supporting intelligence
+
+**Abuse-Ring Sentinel**
+
+Graph/network-based risk intelligence.
+
+**Return-Risk Scorer**
+
+Secondary merchant-loss prediction.
+
+**Chargeback Evidence Responder**
+
+Evidence retrieval, verification, summarization, and response generation.
+
+The entire system should connect these components through a common risk engine.
+
+---
+
+# 4. HIGH-LEVEL ARCHITECTURE
+
+Implement the following conceptual architecture:
+
+TRANSACTION / ORDER / CUSTOMER EVENT
+
+↓
+
+DATA QUALITY ENGINE
+
+↓
+
+FEATURE ENGINEERING
+
+↓
+
+┌──────────────────────────────────────────────┐
+│              RISK SIGNAL LAYER               │
+│                                              │
+│  Fraud Model                                 │
+│  Anomaly Detector                            │
+│  Behavioral Engine                           │
+│  Velocity Engine                              │
+│  Rule Engine                                 │
+│  Return-Risk Model                           │
+│  Graph/Abuse-Ring Engine                     │
+└──────────────────────────────────────────────┘
+
+↓
+
+RISK FUSION ENGINE
+
+↓
+
+RISK SCORE 0–100
+
+↓
+
+EXPLAINABILITY ENGINE
+
+↓
+
+EVIDENCE PACK
+
+↓
+
+AI RISK INVESTIGATOR
+
+↓
+
+DEFENSIVE RISK AGENT
+
+↓
+
+┌──────────────────────────────────────────────┐
+│                  ACTION                      │
+│                                              │
+│  Allow                                       │
+│  Request verification                        │
+│  Create review case                          │
+│  Temporary hold                              │
+│  Escalate                                    │
+│  Generate chargeback evidence                │
+└──────────────────────────────────────────────┘
+
+↓
+
+HUMAN APPROVAL WHERE REQUIRED
+
+↓
+
+AUDIT TRAIL
+
+↓
+
+RISK DASHBOARD
+
+---
+
+# 5. MODULE 1 — DATA INGESTION
+
+Create a robust data ingestion layer.
+
+The system should support:
+
+* Transaction data
+* Customer data
+* Merchant data
+* Device data
+* IP/network metadata where appropriate
+* Order data
+* Return data
+* Chargeback/dispute data
+* Event timestamps
+* Historical behavioral information
+
+Create a canonical transaction schema.
+
+Potential fields include:
+
+* transaction_id
+* customer_id
+* merchant_id
+* timestamp
+* amount
+* currency
+* payment_method
+* device_id
+* ip_id
+* location
+* order_id
+* product/category
+* transaction_status
+* failure_reason
+* return_status
+* chargeback_status
+* fraud_label where available
+
+Do not assume all fields exist in the selected public dataset.
+
+First inspect the dataset.
+
+Where information required for advanced modules is unavailable, use carefully documented synthetic supporting data rather than falsely claiming the data is real.
+
+---
+
+# 6. MODULE 2 — DATA QUALITY ENGINE
+
+Build a data-quality pipeline.
+
+Check:
+
+* Missing values
+* Duplicate records
+* Invalid values
+* Outliers
+* Incorrect timestamps
+* Impossible transaction amounts
+* Invalid categorical values
+* Data leakage
+* Target leakage
+* Duplicate customers
+* Duplicate transactions
+* Inconsistent identifiers
+
+Create a reusable data-quality report.
+
+The report should contain:
+
+* Number of rows
+* Number of columns
+* Missing percentage
+* Duplicate percentage
+* Invalid values
+* Data types
+* Target distribution
+* Potential leakage risks
+
+---
+
+# 7. MODULE 3 — EXPLORATORY DATA ANALYSIS
+
+Perform extensive EDA.
+
+Analyze:
+
+### Transaction behavior
+
+* Transaction amount distribution
+* Transaction frequency
+* Transactions by time
+* Transactions by day
+* Transactions by hour
+* Transactions by payment method
+* Transactions by merchant
+
+### Fraud behavior
+
+Compare:
+
+* Fraud vs legitimate transaction amounts
+* Fraud vs legitimate transaction frequency
+* Fraud by time
+* Fraud by location
+* Fraud by device
+* Fraud by merchant
+* Fraud by payment method
+
+### Behavioral patterns
+
+Investigate:
+
+* Transaction bursts
+* Repeated failures
+* New devices
+* Unusual locations
+* Unusual amounts
+* Account age
+* Transaction velocity
+
+Do not manufacture patterns.
+
+Only report patterns supported by the data.
+
+---
+
+# 8. MODULE 4 — FEATURE ENGINEERING
+
+Build a sophisticated feature-engineering pipeline.
+
+Create transaction-level features.
+
+Examples:
+
+* amount
+* log_amount
+* transaction_hour
+* transaction_day
+* day_of_week
+* account_age
+* merchant_frequency
+* customer_frequency
+
+Create behavioral features:
+
+* average_customer_amount
+* median_customer_amount
+* amount_deviation
+* customer_transaction_count
+* customer_failed_transaction_count
+* customer_recent_activity
+* merchant_transaction_frequency
+
+Create velocity features:
+
+* transactions_last_5_minutes
+* transactions_last_15_minutes
+* transactions_last_1_hour
+* transactions_last_24_hours
+* amount_last_5_minutes
+* amount_last_1_hour
+* failed_attempts_last_10_minutes
+
+Create device features:
+
+* is_new_device
+* device_transaction_count
+* customers_per_device
+
+Create location features:
+
+* location_change
+* distance_from_previous_location where valid
+* locations_last_24_hours
+
+Create temporal behavior:
+
+* time_since_previous_transaction
+* time_since_previous_failed_transaction
+
+Avoid leakage.
+
+All historical features must be calculated using information available BEFORE the transaction being predicted.
+
+---
+
+# 9. MODULE 5 — BASELINE FRAUD MODELS
+
+Build multiple baseline models.
+
+At minimum evaluate:
+
+* Logistic Regression
+* Decision Tree
+* Random Forest
+
+If appropriate, also evaluate:
+
+* XGBoost
+* LightGBM
+* CatBoost
+
+Do not blindly use every model.
+
+Compare them objectively.
+
+Metrics:
+
+* Precision
+* Recall
+* F1
+* ROC-AUC
+* PR-AUC
+* Confusion matrix
+* False-positive rate
+* False-negative rate
+
+Because fraud is usually imbalanced, do NOT use accuracy as the primary metric.
+
+---
+
+# 10. MODULE 6 — CLASS IMBALANCE
+
+Explicitly address class imbalance.
+
+Evaluate techniques such as:
+
+* Class weights
+* Stratified sampling
+* Appropriate oversampling
+* SMOTE where technically appropriate
+* Threshold optimization
+* Cost-sensitive learning
+
+Do not use synthetic oversampling in a way that creates test-set contamination.
+
+Keep the test set strictly untouched.
+
+---
+
+# 11. MODULE 7 — FRAUD-SPIKE DETECTOR
+
+Make this the primary Track 02 deliverable.
+
+The detector should identify:
+
+* Individual suspicious transactions
+* Abnormal transaction bursts
+* Sudden fraud-rate changes
+* Unusual transaction volume
+* Merchant-level risk spikes
+* Time-window anomalies
+
+Implement temporal features and anomaly detection.
+
+Potential approaches:
+
+* Rolling statistics
+* Z-score based detection
+* Isolation Forest
+* Local Outlier Factor
+* Time-window aggregation
+* Change-point detection where appropriate
+
+Evaluate the fraud-spike detector rigorously.
+
+The final report must include:
+
+* Precision
+* Recall
+* F1
+* PR-AUC
+* False-positive rate
+* False-negative rate
+* Confusion matrix
+* Held-out test results
+
+---
+
+# 12. MODULE 8 — UNSUPERVISED ANOMALY DETECTION
+
+Build an independent anomaly layer.
+
+Potential algorithms:
+
+* Isolation Forest
+* Local Outlier Factor
+* One-Class SVM
+* Autoencoder if justified
+
+Generate:
+
+* anomaly_score
+* anomaly_flag
+
+Compare unsupervised anomalies with known fraud labels without pretending that anomaly detection itself proves fraud.
+
+Use anomaly detection as a supporting signal.
+
+---
+
+# 13. MODULE 9 — BEHAVIORAL RISK ENGINE
+
+Create customer and merchant behavioral profiles.
+
+Example customer profile:
+
+Average transaction: ₹2,400
+
+Typical transaction count/day: 3
+
+Typical active hours: 10:00–21:00
+
+Known devices: 2
+
+Known locations: 3
+
+Then compare a new transaction against historical behavior.
+
+Generate:
+
+* behavior_deviation_score
+* amount_deviation_score
+* velocity_score
+* device_risk_score
+* location_risk_score
+
+The behavioral engine should provide interpretable evidence.
+
+---
+
+# 14. MODULE 10 — ABUSE-RING SENTINEL
+
+Build a graph-based risk intelligence module.
+
+Represent relationships between entities such as:
+
+Customer
+Device
+IP
+Merchant
+Order
+Transaction
+
+Example:
+
+Customer A → Device X → Customer B
+
+Customer B → Device X → Customer C
+
+Device X → multiple unrelated accounts
+
+Create a graph using NetworkX or an appropriate graph technology.
+
+Calculate useful graph features such as:
+
+* Node degree
+* Shared-device count
+* Shared-IP count
+* Cluster size
+* Relationship density
+* Connected component
+* Suspicious cluster score
+
+Identify potentially suspicious relationship structures.
+
+The system must NOT help users construct abuse networks.
+
+It must only identify and investigate suspicious patterns defensively.
+
+---
+
+# 15. MODULE 11 — RETURN-RISK SCORER
+
+Build a secondary model for merchant return loss.
+
+Predict whether an order/customer interaction has elevated return-risk.
+
+Possible features:
+
+* historical return rate
+* order frequency
+* average order value
+* product category
+* previous returns
+* time-to-return
+* repeated return behavior
+* customer history
+
+Output:
+
+return_risk_score
+
+Example:
+
+Return Risk: 87/100
+
+Use this as a supporting merchant-loss signal.
+
+Do not incorrectly label return-risk as payment fraud.
+
+---
+
+# 16. MODULE 12 — CHARGEBACK INTELLIGENCE
+
+Create a chargeback investigation system.
+
+For a chargeback case, gather relevant evidence:
+
+* Transaction information
+* Customer history
+* Order details
+* Payment status
+* Device information
+* Risk signals
+* Previous related activity
+* Delivery/order information where legitimately available
+
+Build an evidence pack.
+
+Every evidence item must include its source.
+
+Never fabricate evidence.
+
+---
+
+# 17. MODULE 13 — AI CHARGEBACK EVIDENCE RESPONDER
+
+Use an LLM to organize and summarize verified evidence.
+
+The LLM should:
+
+* Summarize the case
+* Identify relevant evidence
+* Explain risk signals
+* Identify missing information
+* Generate a structured response draft
+* Recommend human review where appropriate
+
+The LLM must NOT invent facts.
+
+Use a strict evidence-grounded prompt.
+
+If information is unavailable, the AI must say:
+
+"Evidence unavailable."
+
+Never hallucinate.
+
+---
+
+# 18. MODULE 14 — EXPLAINABLE AI
+
+Use explainability methods.
+
+Implement:
+
+* SHAP where appropriate
+* Feature importance
+* Local explanations
+* Global model explanations
+
+For every high-risk transaction, produce:
+
+Top risk factors:
+
+1. New device
+2. Abnormal amount
+3. High velocity
+4. Geographic deviation
+5. Suspicious entity relationship
+
+Show both numerical model evidence and human-readable explanations.
+
+---
+
+# 19. MODULE 15 — RISK FUSION ENGINE
+
+Combine the signals into a final risk score.
+
+Potential inputs:
+
+* Fraud probability
+* Anomaly score
+* Behavioral score
+* Velocity score
+* Device risk
+* Location risk
+* Graph risk
+* Return-risk score
+* Chargeback risk
+* Rule violations
+
+Do NOT arbitrarily choose weights.
+
+Compare approaches such as:
+
+* Weighted scoring
+* Logistic meta-model
+* Calibration
+* Stacking where appropriate
+
+Optimize thresholds using validation data.
+
+Keep the final held-out test set untouched until final evaluation.
+
+---
+
+# 20. MODULE 16 — RISK SCORE
+
+Produce a normalized:
+
+Risk Score: 0–100
+
+Suggested interpretation:
+
+0–30:
+
+LOW RISK
+
+31–70:
+
+MEDIUM RISK
+
+71–100:
+
+HIGH RISK
+
+These thresholds must ultimately be justified through validation, business cost, and false-positive analysis rather than blindly assumed.
+
+---
+
+# 21. MODULE 17 — RISK INVESTIGATOR
+
+Build an AI Risk Investigator.
+
+Inputs:
+
+* Transaction
+* Risk score
+* Model outputs
+* SHAP explanations
+* Behavioral evidence
+* Graph evidence
+* Historical information
+* Rules triggered
+
+Output:
+
+### Risk Investigation Report
+
+Include:
+
+* Transaction summary
+* Risk score
+* Risk classification
+* Evidence
+* Top risk factors
+* Related entities
+* Model reasoning
+* Confidence
+* Recommended action
+* Missing information
+* Limitations
+
+The LLM must distinguish:
+
+FACT
+
+INFERENCE
+
+RECOMMENDATION
+
+Do not allow unsupported claims.
+
+---
+
+# 22. MODULE 18 — DEFENSIVE AI RISK AGENT
+
+Build a bounded agent.
+
+The agent can use controlled tools such as:
+
+* get_transaction()
+* get_customer_history()
+* get_recent_transactions()
+* get_device_history()
+* get_related_entities()
+* calculate_risk()
+* retrieve_evidence()
+* generate_investigation()
+* create_review_case()
+* generate_chargeback_evidence()
+
+The agent should follow:
+
+OBSERVE
+
+↓
+
+INVESTIGATE
+
+↓
+
+ASSESS
+
+↓
+
+RECOMMEND
+
+↓
+
+REQUEST APPROVAL
+
+↓
+
+EXECUTE ALLOWED DEFENSIVE ACTION
+
+↓
+
+LOG
+
+The agent should never have unrestricted access to financial operations.
+
+---
+
+# 23. MODULE 19 — HUMAN-IN-THE-LOOP
+
+High-impact actions should require human approval.
+
+Example:
+
+LOW RISK
+
+→ Allow
+
+MEDIUM RISK
+
+→ Additional verification / review
+
+HIGH RISK
+
+→ Temporary hold / manual investigation
+
+Human reviewer can:
+
+* Approve
+* Reject
+* Escalate
+* Request more evidence
+
+Record every human decision.
+
+---
+
+# 24. MODULE 20 — AUDIT TRAIL
+
+Every important decision must be logged.
+
+Record:
+
+* Transaction ID
+* Timestamp
+* Risk score
+* Model scores
+* Evidence
+* Risk reasons
+* AI explanation
+* Agent recommendation
+* Human decision
+* Final action
+* Decision version
+* Model version
+
+This should make every decision traceable.
+
+---
+
+# 25. MODULE 21 — MODEL MONITORING
+
+Add production-oriented monitoring.
+
+Monitor:
+
+* Prediction distribution
+* Fraud rate
+* Risk-score distribution
+* Feature drift
+* Data drift
+* Performance degradation
+* False-positive rate
+* False-negative rate
+
+Create drift alerts.
+
+Potential techniques:
+
+* PSI
+* KS test
+* Distribution comparison
+* Feature statistics
+
+---
+
+# 26. MODULE 22 — MODEL CALIBRATION
+
+Evaluate whether predicted probabilities are reliable.
+
+Use:
+
+* Calibration curves
+* Brier score
+* Reliability diagrams
+
+If necessary use:
+
+* Platt scaling
+* Isotonic regression
+
+The risk score should be meaningful rather than simply a random confidence number.
+
+---
+
+# 27. MODULE 23 — COST-SENSITIVE RISK
+
+Model the business cost of:
+
+False Positive
+
+and
+
+False Negative.
+
+Example:
+
+False positive:
+
+Legitimate customer blocked.
+
+False negative:
+
+Fraudulent transaction approved.
+
+Calculate expected loss.
+
+Use this to justify risk thresholds.
+
+This is critical because the official track specifically emphasizes honest metrics including false-positive cost.
+
+---
+
+# 28. MODULE 24 — FAILURE ANALYSIS
+
+Do not hide failures.
+
+Analyze:
+
+* False positives
+* False negatives
+* Borderline transactions
+* Model disagreements
+* Anomaly-only detections
+* Graph-only detections
+* LLM investigation errors
+
+Create a failure-analysis notebook.
+
+For each important failure:
+
+What happened?
+
+Why did the model fail?
+
+Could it be fixed?
+
+What additional data would help?
+
+---
+
+# 29. MODULE 25 — STRESS TESTING
+
+Create defensive synthetic scenarios.
+
+Examples:
+
+* Sudden high-value transaction
+* New device
+* High transaction velocity
+* Multiple failed transactions
+* Legitimate travel
+* Legitimate high-value purchase
+* Shared device in a family
+* Merchant promotion causing transaction spike
+* New customer
+* Rare but legitimate behavior
+
+Test whether the system incorrectly flags legitimate behavior.
+
+---
+
+# 30. MODULE 26 — SECURITY AND SAFETY
+
+The entire project must remain defensive.
+
+Implement:
+
+* Input validation
+* Authentication
+* Authorization
+* Rate limiting
+* Secret management
+* Secure logging
+* PII minimization
+* Data masking
+* Prompt-injection protection
+* Tool permission boundaries
+* Human approval for sensitive actions
+
+Do not expose sensitive transaction information unnecessarily.
+
+---
+
+# 31. MODULE 27 — RAG / KNOWLEDGE BASE
+
+If useful, add RAG for:
+
+* Merchant risk policies
+* Chargeback policies
+* Internal risk rules
+* Investigation guidelines
+* Approved response templates
+
+The RAG system should provide citations or source references for retrieved policies.
+
+Do not use RAG as a substitute for the fraud ML model.
+
+Use:
+
+ML → prediction
+
+RAG → policy/knowledge retrieval
+
+LLM → explanation/investigation
+
+Agent → workflow orchestration
+
+---
+
+# 32. MODULE 28 — DASHBOARD
+
+Create a professional risk dashboard.
+
+Dashboard pages:
+
+### Overview
+
+Show:
+
+* Transactions analyzed
+* High-risk transactions
+* Fraud detected
+* Fraud prevented
+* Active investigations
+* Chargeback cases
+* Return-risk cases
+* Average risk score
+
+### Transaction Investigation
+
+Show:
+
+* Transaction ID
+* Customer
+* Amount
+* Fraud probability
+* Anomaly score
+* Risk score
+* Risk factors
+* Related entities
+* AI investigation
+
+### Abuse-Ring View
+
+Show:
+
+* Entity graph
+* Connected accounts
+* Shared devices
+* Suspicious clusters
+
+### Chargeback Center
+
+Show:
+
+* Chargeback cases
+* Evidence
+* AI-generated investigation
+* Missing evidence
+* Recommended response
+
+### Return Risk
+
+Show:
+
+* Customer return-risk
+* Historical return rate
+* Risk drivers
+
+### Audit Center
+
+Show:
+
+* Decisions
+* Agent actions
+* Human approvals
+* Model version
+* Timestamps
+
+---
+
+# 33. TECHNOLOGY STACK
+
+Use practical technologies.
+
+## Programming
+
+Python
+
+## Data
+
+* Pandas
+* NumPy
+* Polars if useful
+
+## ML
+
+* Scikit-learn
+* XGBoost
+* LightGBM
+* CatBoost where appropriate
+
+## Explainability
+
+* SHAP
+
+## Anomaly Detection
+
+* Scikit-learn
+* PyOD if useful
+
+## Graph
+
+* NetworkX initially
+* Graph database only if justified
+
+## LLM
+
+Potentially:
+
+* Gemini
+* Ollama
+* Hugging Face models
+
+Choose based on reliability, cost, availability, and deployment requirements.
+
+## Agent
+
+Potentially:
+
+* LangGraph
+* LangChain
+* MCP where it provides genuine value
+
+Do not add frameworks unnecessarily.
+
+## Backend
+
+* FastAPI
+
+## Frontend
+
+Start with:
+
+* Streamlit
+
+Upgrade to a separate frontend only if justified.
+
+## Database
+
+Potentially:
+
+* PostgreSQL
+
+## Deployment
+
+Potentially:
+
+* Docker
+* Google Cloud Run
+* Appropriate managed database
+
+---
+
+# 34. NOTEBOOK DEVELOPMENT PLAN
+
+Develop the project incrementally.
+
+Create:
+
+01_data_understanding.ipynb
+
+02_data_quality.ipynb
+
+03_eda.ipynb
+
+04_feature_engineering.ipynb
+
+05_behavioral_features.ipynb
+
+06_velocity_features.ipynb
+
+07_baseline_models.ipynb
+
+08_advanced_fraud_models.ipynb
+
+09_imbalance_and_thresholds.ipynb
+
+10_model_calibration.ipynb
+
+11_anomaly_detection.ipynb
+
+12_fraud_spike_detection.ipynb
+
+13_graph_construction.ipynb
+
+14_abuse_ring_detection.ipynb
+
+15_return_risk.ipynb
+
+16_risk_fusion.ipynb
+
+17_risk_threshold_optimization.ipynb
+
+18_shap_explainability.ipynb
+
+19_chargeback_evidence.ipynb
+
+20_ai_investigator.ipynb
+
+21_risk_agent.ipynb
+
+22_human_in_the_loop.ipynb
+
+23_final_evaluation.ipynb
+
+24_failure_analysis.ipynb
+
+25_stress_testing.ipynb
+
+26_business_impact.ipynb
+
+27_model_monitoring.ipynb
+
+---
+
+# 35. DATASET STRATEGY
+
+Do not immediately choose a random dataset.
+
+First define the required schema.
+
+Find a legitimate public dataset suitable for fraud/risk modeling.
+
+Potential sources may include:
+
+* Kaggle
+* UCI
+* IEEE datasets where legally available
+* Public financial datasets
+* Government/open datasets
+
+Evaluate datasets based on:
+
+* Number of transactions
+* Fraud labels
+* Temporal information
+* Customer identifiers
+* Merchant identifiers
+* Device information
+* Transaction amount
+* Payment information
+* Geographic information
+* Return information
+* Chargeback information
+
+If a single public dataset cannot support all modules, use a combination of datasets or carefully documented synthetic supporting data.
+
+Clearly distinguish:
+
+REAL PUBLIC DATA
+
+from
+
+SYNTHETIC DATA
+
+Do not misrepresent synthetic data as real.
+
+---
+
+# 36. DATA SPLITTING
+
+Use a rigorous evaluation strategy.
+
+Avoid random leakage where temporal information matters.
+
+Prefer:
+
+TRAIN
+
+↓
+
+VALIDATION
+
+↓
+
+HELD-OUT TEST
+
+Where possible use chronological splitting:
+
+Earlier transactions → training
+
+Later transactions → validation/test
+
+The final test set must remain untouched until final evaluation.
+
+---
+
+# 37. EXPERIMENT TRACKING
+
+Track experiments.
+
+For every model record:
+
+* Model name
+* Dataset version
+* Feature version
+* Hyperparameters
+* Precision
+* Recall
+* F1
+* PR-AUC
+* ROC-AUC
+* False-positive rate
+* False-negative rate
+* Threshold
+* Training time
+* Inference time
+
+Potential tools:
+
+* MLflow
+* Weights & Biases
+* Simple CSV/JSON tracking initially
+
+---
+
+# 38. MODEL VERSIONING
+
+Track:
+
+* Dataset version
+* Feature version
+* Model version
+* Risk policy version
+* Prompt version
+* Agent version
+
+Example:
+
+Model:
+
+fraud_model_v1.3
+
+Risk engine:
+
+risk_engine_v1.2
+
+Investigator prompt:
+
+investigator_prompt_v1.1
+
+---
+
+# 39. API DESIGN
+
+Create APIs such as:
+
+POST /risk/score
+
+GET /transaction/{transaction_id}
+
+GET /customer/{customer_id}/risk
+
+GET /investigation/{transaction_id}
+
+POST /investigation/create
+
+POST /chargeback/analyze
+
+GET /risk/network/{entity_id}
+
+POST /review/{case_id}/decision
+
+GET /audit/{transaction_id}
+
+Do not expose sensitive operations without authentication and authorization.
+
+---
+
+# 40. SAMPLE END-TO-END WORKFLOW
+
+A transaction arrives:
+
+TX_19281
+
+Amount:
+
+₹42,000
+
+The system calculates:
+
+Fraud probability:
+
+0.89
+
+Anomaly score:
+
+0.92
+
+Behavior deviation:
+
+0.86
+
+Velocity risk:
+
+0.81
+
+Graph risk:
+
+0.78
+
+↓
+
+Risk Fusion
+
+↓
+
+Final Risk:
+
+91/100
+
+↓
+
+AI Investigator receives the structured evidence.
+
+↓
+
+It generates:
+
+HIGH RISK
+
+Reasons:
+
+* Amount substantially deviates from historical behavior.
+* New device detected.
+* High transaction velocity.
+* Related entity relationship detected.
+
+↓
+
+Agent recommends:
+
+TEMPORARY HOLD + MANUAL REVIEW
+
+↓
+
+Human reviewer approves.
+
+↓
+
+Action recorded.
+
+↓
+
+Audit trail generated.
+
+---
+
+# 41. EVALUATION REPORT
+
+The final evaluation must include:
+
+## Fraud Detection
+
+* Precision
+* Recall
+* F1
+* PR-AUC
+* ROC-AUC
+* Confusion matrix
+
+## Risk System
+
+* False-positive rate
+* False-negative rate
+* Average risk score
+* Detection latency
+* High-risk precision
+
+## Business
+
+* Estimated loss prevented
+* False-positive cost
+* False-negative cost
+* Expected financial impact
+
+## AI
+
+* Investigation accuracy
+* Evidence grounding
+* Hallucination rate
+* Unsupported-claim rate
+
+## Agent
+
+* Tool-call success rate
+* Policy compliance
+* Human escalation rate
+* Action correctness
+
+Do not fabricate any results.
+
+All final numbers must come from actual experiments.
+
+---
+
+# 42. RECRUITER/JUDGE EXPERIENCE
+
+The final project should communicate this story:
+
+### Problem
+
+Merchants lose money through fraud, returns and chargebacks.
+
+### Existing limitation
+
+Traditional systems may detect individual risk signals but struggle to combine transaction, behavioral, relationship and evidence-level intelligence into a coherent investigation workflow.
+
+### Solution
+
+RazorShield AI combines:
+
+ML
+
+*
+
+Anomaly Detection
+
+*
+
+Behavioral Intelligence
+
+*
+
+Graph Risk
+
+*
+
+Return Risk
+
+*
+
+Chargeback Intelligence
+
+*
+
+Explainable AI
+
+*
+
+LLM Investigation
+
+*
+
+Bounded Agent
+
+*
+
+Human Review
+
+*
+
+Audit Trail
+
+### Result
+
+A merchant receives:
+
+Risk
+
+*
+
+Evidence
+
+*
+
+Explanation
+
+*
+
+Recommended Action
+
+rather than merely:
+
+"Fraud = 1."
+
+---
+
+# 43. FINAL DEMO FLOW
+
+The final demo should be approximately:
+
+### STEP 1
+
+Show the dashboard.
+
+### STEP 2
+
+Introduce a transaction.
+
+### STEP 3
+
+Risk engine analyzes it.
+
+### STEP 4
+
+Show:
+
+Fraud probability
+
+Anomaly score
+
+Behavior score
+
+Graph score
+
+Final risk score
+
+### STEP 5
+
+Show why the transaction is risky.
+
+### STEP 6
+
+Open AI Investigator.
+
+### STEP 7
+
+Show evidence-grounded investigation.
+
+### STEP 8
+
+Show recommended defensive action.
+
+### STEP 9
+
+Human reviewer approves.
+
+### STEP 10
+
+Show audit trail.
+
+### STEP 11
+
+Show final evaluation metrics.
+
+### STEP 12
+
+Show business impact.
+
+---
+
+# 44. FINAL REPOSITORY STRUCTURE
+
+Use a professional structure:
+
+razorshield-ai/
+
+├── data/
+
+│   ├── raw/
+
+│   ├── processed/
+
+│   └── synthetic/
+
+│
+├── notebooks/
+
+│   ├── 01_data_understanding.ipynb
+│   ├── 02_data_quality.ipynb
+│   ├── 03_eda.ipynb
+│   ├── 04_feature_engineering.ipynb
+│   ├── 05_behavioral_features.ipynb
+│   ├── 06_velocity_features.ipynb
+│   ├── 07_baseline_models.ipynb
+│   ├── 08_advanced_fraud_models.ipynb
+│   ├── 09_imbalance_and_thresholds.ipynb
+│   ├── 10_model_calibration.ipynb
+│   ├── 11_anomaly_detection.ipynb
+│   ├── 12_fraud_spike_detection.ipynb
+│   ├── 13_graph_construction.ipynb
+│   ├── 14_abuse_ring_detection.ipynb
+│   ├── 15_return_risk.ipynb
+│   ├── 16_risk_fusion.ipynb
+│   ├── 17_risk_threshold_optimization.ipynb
+│   ├── 18_shap_explainability.ipynb
+│   ├── 19_chargeback_evidence.ipynb
+│   ├── 20_ai_investigator.ipynb
+│   ├── 21_risk_agent.ipynb
+│   ├── 22_human_in_the_loop.ipynb
+│   ├── 23_final_evaluation.ipynb
+│   ├── 24_failure_analysis.ipynb
+│   ├── 25_stress_testing.ipynb
+│   ├── 26_business_impact.ipynb
+│   └── 27_model_monitoring.ipynb
+│
+├── src/
+
+│   ├── data/
+│   ├── preprocessing/
+│   ├── features/
+│   ├── models/
+│   ├── anomaly/
+│   ├── behavioral/
+│   ├── graph/
+│   ├── returns/
+│   ├── chargebacks/
+│   ├── risk_engine/
+│   ├── explainability/
+│   ├── investigator/
+│   ├── agent/
+│   └── monitoring/
+│
+├── app/
+
+│   ├── backend/
+│   └── frontend/
+
+├── tests/
+
+├── models/
+
+├── configs/
+
+├── reports/
+
+├── docs/
+
+├── requirements.txt
+
+├── Dockerfile
+
+├── .env.example
+
+├── .gitignore
+
+└── README.md
+
+---
+
+# 45. DOCUMENTATION
+
+Create excellent documentation.
+
+README must include:
+
+* Project overview
+* Problem statement
+* Track alignment
+* Architecture
+* Features
+* Dataset
+* Data processing
+* ML models
+* Anomaly detection
+* Graph intelligence
+* Return-risk model
+* Chargeback intelligence
+* AI investigator
+* Agent architecture
+* Evaluation
+* Business metrics
+* Safety constraints
+* Installation
+* Usage
+* API
+* Screenshots
+* Demo
+* Limitations
+* Future work
+
+Also create:
+
+ARCHITECTURE.md
+
+MODEL_CARD.md
+
+RISK_POLICY.md
+
+DATA_DICTIONARY.md
+
+EVALUATION.md
+
+SAFETY.md
+
+---
+
+# 46. DEVELOPMENT RULES
+
+Follow these rules throughout the project:
+
+1. Do not fabricate metrics.
+2. Do not fabricate dataset information.
+3. Do not claim real-world performance without evidence.
+4. Keep the test set isolated.
+5. Prevent data leakage.
+6. Explain every major modeling decision.
+7. Prefer simple models when they perform equally well.
+8. Do not add technologies merely for buzzwords.
+9. Every AI feature must have a clear purpose.
+10. Every agent action must be bounded.
+11. Keep the project strictly defensive.
+12. Preserve an audit trail.
+13. Clearly distinguish real and synthetic data.
+14. Test failure cases.
+15. Optimize for precision/recall and business impact rather than accuracy alone.
+16. Keep the system reproducible.
+17. Version datasets, models and prompts.
+18. Never allow the LLM to invent evidence.
+19. Never allow the agent to bypass risk controls.
+20. Human approval must be available for high-impact actions.
+
+---
+
+# 47. DEVELOPMENT ORDER
+
+Do NOT attempt to build everything simultaneously.
+
+Build in this exact order:
+
+PHASE 0
+
+Project definition
+
+↓
+
+PHASE 1
+
+Dataset selection
+
+↓
+
+PHASE 2
+
+Data understanding
+
+↓
+
+PHASE 3
+
+Data quality
+
+↓
+
+PHASE 4
+
+EDA
+
+↓
+
+PHASE 5
+
+Feature engineering
+
+↓
+
+PHASE 6
+
+Baseline fraud model
+
+↓
+
+PHASE 7
+
+Advanced fraud model
+
+↓
+
+PHASE 8
+
+Class imbalance + threshold optimization
+
+↓
+
+PHASE 9
+
+Anomaly detection
+
+↓
+
+PHASE 10
+
+Fraud-spike detection
+
+↓
+
+PHASE 11
+
+Behavioral risk
+
+↓
+
+PHASE 12
+
+Graph/abuse-ring intelligence
+
+↓
+
+PHASE 13
+
+Return-risk model
+
+↓
+
+PHASE 14
+
+Risk fusion
+
+↓
+
+PHASE 15
+
+Explainable AI
+
+↓
+
+PHASE 16
+
+Chargeback evidence system
+
+↓
+
+PHASE 17
+
+AI Investigator
+
+↓
+
+PHASE 18
+
+Risk Agent
+
+↓
+
+PHASE 19
+
+Human-in-the-loop
+
+↓
+
+PHASE 20
+
+Audit trail
+
+↓
+
+PHASE 21
+
+Evaluation
+
+↓
+
+PHASE 22
+
+Failure analysis
+
+↓
+
+PHASE 23
+
+Stress testing
+
+↓
+
+PHASE 24
+
+API
+
+↓
+
+PHASE 25
+
+Dashboard
+
+↓
+
+PHASE 26
+
+Deployment
+
+↓
+
+PHASE 27
+
+Final presentation
+
+---
+
+# 48. HOW THE AI ASSISTANT SHOULD HELP ME
+
+When helping me build this project:
+
+* Work step-by-step.
+* Do not dump the entire implementation at once.
+* Explain what we are doing before giving code.
+* Give complete executable code for the current step.
+* Explain important code sections.
+* Tell me exactly where each file/notebook belongs.
+* When an error occurs, diagnose it from the error/output I provide.
+* Do not move to the next phase until the current phase works.
+* Maintain consistency with previous decisions.
+* Reuse existing components instead of unnecessarily rewriting them.
+* Keep track of project architecture.
+* Prefer production-quality code.
+* Include comments where they genuinely help.
+* Add validation and error handling.
+* Test important components.
+* Do not fabricate outputs.
+* If a dataset does not support a proposed feature, explicitly explain the limitation and suggest a valid alternative.
+* If a feature is unnecessary, say so instead of forcing it into the architecture.
+
+---
+
+# 49. FIRST TASK
+
+Do NOT start coding the complete system.
+
+Start with:
+
+## PHASE 0 — PROJECT DEFINITION
+
+Produce:
+
+1. Final problem statement
+2. Target users
+3. Primary loss class
+4. Secondary loss signals
+5. Project objectives
+6. Functional requirements
+7. Non-functional requirements
+8. Dataset requirements
+9. Required data schema
+10. System architecture
+11. ML architecture
+12. AI/LLM architecture
+13. Agent architecture
+14. Evaluation strategy
+15. Safety constraints
+16. Technology stack
+17. Development roadmap
+18. Final demo plan
+19. Buildathon judging strategy
+20. Definition of Done
+
+Then stop and wait for approval before moving to dataset selection.
+
+---
+
+# 50. DEFINITION OF DONE
+
+RazorShield AI is complete only when:
+
+* A real working fraud-risk model exists.
+* It is evaluated on a held-out test set.
+* Precision and recall are reported.
+* False-positive cost is measured.
+* Fraud-spike detection works.
+* Anomaly detection works.
+* Behavioral risk analysis works.
+* Abuse-ring analysis works where data permits.
+* Return-risk scoring works where data permits.
+* Chargeback evidence generation works using verified evidence.
+* AI investigation is evidence-grounded.
+* Risk fusion produces an interpretable risk score.
+* The agent can perform bounded defensive workflows.
+* Human approval exists for sensitive decisions.
+* All actions are logged.
+* Failure analysis has been completed.
+* Stress testing has been completed.
+* The system has a working API.
+* A usable dashboard exists.
+* Documentation is complete.
+* The system can be demonstrated end-to-end.
+* No fabricated metrics or evidence are used.
+* The entire system remains strictly defense-only.
+
+---
+
+# FINAL PRODUCT PRINCIPLE
+
+Do not build:
+
+"Another fraud detection model."
+
+Build:
+
+> **An explainable, evidence-grounded, defense-only AI Risk Manager that can detect suspicious financial behavior, discover abnormal and connected activity, assess merchant loss risk, investigate cases, explain why something is risky, recommend bounded defensive actions, involve humans when necessary, and maintain a complete audit trail.**
+
+The core product loop is:
+
+**DETECT → INVESTIGATE → EXPLAIN → SCORE → RECOMMEND → APPROVE → ACT → AUDIT → LEARN**
+
+Build it as a serious engineering project suitable for a Razorpay Buildathon submission and strong enough to demonstrate practical skills in:
+
+* Machine Learning
+* Fraud Detection
+* Unsupervised Learning
+* Anomaly Detection
+* Time-Series Analysis
+* Feature Engineering
+* Graph Analytics
+* Explainable AI
+* Generative AI
+* RAG
+* Agentic AI
+* Backend Engineering
+* API Design
+* Model Evaluation
+* MLOps
+* Responsible AI
+* Financial Risk Engineering

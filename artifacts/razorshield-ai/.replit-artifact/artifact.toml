@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "RazorShield AI"
+description = "A defense-only merchant risk intelligence dashboard for detecting suspicious transactions, investigating evidence, approving bounded actions, and auditing every decision."
+version = "1.0.0"
+id = "artifacts/razorshield-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25262
+
+[services.development]
+run = "pnpm --filter @workspace/razorshield-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/razorshield-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/razorshield-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25262"
+BASE_PATH = "/"
