@@ -1,0 +1,19 @@
+[
+  {
+    "transaction_id": "TX-JSON-DEMO-01",
+    "customer_id": "CUS-JSON-01",
+    "amount": 18900,
+    "currency": "INR",
+    "device_id": "DEV-JSON-01",
+    "location": "Mumbai",
+    "payment_method": "Card",
+    "customer_average_amount": 5100,
+    "transactions_last_5_minutes": 5,
+    "transactions_last_hour": 12,
+    "failed_attempts_last_10_minutes": 2,
+    "is_new_device": true,
+    "is_new_location": true,
+    "shared_device_accounts": 7,
+    "historical_return_rate": 0.34
+  }
+]

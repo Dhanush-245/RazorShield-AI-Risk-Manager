@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "model_version": "ieee-cis-hgb-v1",
+  "files": {
+    "MODEL_CARD.md": {
+      "sha256": "c700173ed76eb875890acd64609012b083d17ab6c16009f55042e92a762fc23d",
+      "bytes": 877
+    },
+    "calibrator.pkl": {
+      "sha256": "6d59cec39f062b5127f4872e6f388a63dfbc64dc7364b5a0fdf701a05036dd4e",
+      "bytes": 553
+    },
+    "feature_columns.json": {
+      "sha256": "b820ea7bebf3d0e1fe9d92be3286daa1428eeb35fd3d85e9686ce3093ccf3a2b",
+      "bytes": 3675
+    },
+    "fraud_model.pkl": {
+      "sha256": "02ee665631644fc0e53df0c399fe6174eb4d0da6bb6dcdeb1b0b0498938764f5",
+      "bytes": 324254
+    },
+    "preprocessing_pipeline.pkl": {
+      "sha256": "b973bf521a913937815b2c8eaf9c42401c24bdfc4e454e22e9900cb23e250339",
+      "bytes": 113
+    },
+    "risk_config.json": {
+      "sha256": "099469a2077e9ef29900081a654d9ef96851ee1dc51f9b06a24cfd1a3addb67b",
+      "bytes": 697
+    },
+    "threshold_analysis.json": {
+      "sha256": "b189d07346f00297b92ea7acea1dfab90485e2e221c03579ba6aaffc3c422fd6",
+      "bytes": 4793
+    },
+    "training_report.json": {
+      "sha256": "2a11f6a64ac79158bb86a29cee5a04efeae1beb4e91b18a3be533642dce5edae",
+      "bytes": 3413
+    }
+  }
+}

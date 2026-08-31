@@ -1,0 +1,3 @@
+transaction_id,customer_id,amount,currency,device_id,location,payment_method,customer_average_amount,transactions_last_5_minutes,transactions_last_hour,failed_attempts_last_10_minutes,is_new_device,is_new_location,shared_device_accounts,historical_return_rate
+TX-BATCH-DEMO-01,CUS-DEMO-01,42000,INR,DEV-DEMO-01,Hyderabad,Card,3200,8,21,5,true,true,6,0.42
+TX-BATCH-DEMO-02,CUS-DEMO-02,1450,INR,DEV-DEMO-02,Pune,UPI,1800,1,3,0,false,false,0,0.04

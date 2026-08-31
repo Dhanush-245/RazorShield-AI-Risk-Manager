@@ -10,6 +10,26 @@ out-tsc
 
 # dependencies
 node_modules
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+playwright-report/
+test-results/
+*.db
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+*.pem
+*.key
+outputs/
 
 # IDEs and editors
 /.idea
@@ -47,3 +67,15 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Licensed/large ML inputs and generated real-data outputs
+ml/data/raw/*.csv
+ml/data/raw/*.zip
+ml/data/processed/*
+!ml/data/processed/.gitkeep
+ml/reports/*
+!ml/reports/.gitkeep
+ml/models/real/*
+!ml/models/real/.gitkeep
+# Candidate artifacts trained on separately licensed competition data stay local.
+ml/artifacts/ieee_cis_*/*.pkl

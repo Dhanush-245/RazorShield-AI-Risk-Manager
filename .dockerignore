@@ -1,0 +1,17 @@
+.git
+node_modules
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/dist
+*.db
+.env
+.env.*
+!.env.example
+outputs
+ml/data/raw
+ml/data/processed
+ml/reports
+ml/models/real
+ml/artifacts/ieee_cis_*/*.pkl

@@ -30,7 +30,28 @@ export interface RiskOverview {
 export interface RiskTransaction {
   transactionId: string;
   customerId: string;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  customerVerificationStatus?: string;
+  senderAccountReference?: string | null;
+  senderBankName?: string | null;
+  senderBankIfsc?: string | null;
   merchantId: string;
+  deviceId?: string | null;
+  location?: string | null;
+  paymentMethod?: string | null;
+  recipientId?: string | null;
+  recipientName?: string | null;
+  recipientAccountReference?: string | null;
+  recipientBankName?: string | null;
+  recipientBankIfsc?: string | null;
+  recipientEmail?: string | null;
+  recipientPhone?: string | null;
+  recipientType?: string;
+  recipientCategory?: string;
+  recipientVerified?: boolean;
+  transactionIntent?: string;
   amount: number;
   currency: string;
   timestamp: string;
@@ -54,6 +75,51 @@ export interface EvidenceItem {
 
 export interface Investigation {
   transaction: RiskTransaction;
+  fundsFlow: {
+    direction: string;
+    sender: {
+      customerReference: string;
+      name: string | null;
+      email: string | null;
+      phone: string | null;
+      accountReference: string | null;
+      accountReferenceStatus: string;
+      bankName: string | null;
+      bankIfsc: string | null;
+      customerVerificationStatus: string;
+      age: number | null;
+      accountAgeDays: number | null;
+      historicalAverageAmount: number | null;
+      historicalFraudCount: number | null;
+      deviceId: string | null;
+      deviceStatus: string;
+      location: string | null;
+      locationStatus: string;
+    };
+    recipient: {
+      accountReference: string | null;
+      entityReference: string | null;
+      name: string | null;
+      email: string | null;
+      phone: string | null;
+      bankName: string | null;
+      bankIfsc: string | null;
+      type: string;
+      category: string;
+      verified: boolean;
+      riskScore: number | null;
+      usedBefore: boolean;
+      priorTransactionsFromCustomer: number | null;
+      transactionsLast15Minutes: number | null;
+      linkedCustomers: number | null;
+      linkedDevices: number | null;
+    };
+    amount: number;
+    currency: string;
+    paymentMethod: string | null;
+    intent: string;
+    source: string;
+  };
   summary: string;
   confidence: number;
   recommendation: string;
@@ -82,14 +148,14 @@ export interface RiskNetwork {
   links: NetworkLink[];
 }
 
-export type ReviewDecisionInputDecision = typeof ReviewDecisionInputDecision[keyof typeof ReviewDecisionInputDecision];
-
+export type ReviewDecisionInputDecision =
+  (typeof ReviewDecisionInputDecision)[keyof typeof ReviewDecisionInputDecision];
 
 export const ReviewDecisionInputDecision = {
-  approve: 'approve',
-  reject: 'reject',
-  escalate: 'escalate',
-  request_evidence: 'request_evidence',
+  approve: "approve",
+  reject: "reject",
+  escalate: "escalate",
+  request_evidence: "request_evidence",
 } as const;
 
 export interface ReviewDecisionInput {
@@ -106,4 +172,3 @@ export interface AuditEvent {
   note?: string;
   decisionVersion: string;
 }
-

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "model_version": "ieee-cis-xgboost-v2",
+  "active_profile": "capacity_constrained_cost",
+  "low_threshold": 0.056651,
+  "high_threshold": 0.151543,
+  "review_threshold": 0.151543,
+  "profiles": {
+    "balanced_f1": {
+      "threshold": 0.211866,
+      "objective": "maximum validation F1"
+    },
+    "cost_sensitive": {
+      "threshold": 0.02103,
+      "objective": "minimum illustrative validation business cost",
+      "costs_inr": {
+        "false_positive": 100.0,
+        "false_negative": 5000.0,
+        "manual_review": 50.0
+      }
+    },
+    "capacity_constrained_cost": {
+      "threshold": 0.151543,
+      "objective": "minimum validation business cost at a 4% operating review rate with a 5% hard capacity",
+      "operating_review_rate": 0.04,
+      "maximum_review_rate": 0.05,
+      "costs_inr": {
+        "false_positive": 100.0,
+        "false_negative": 5000.0,
+        "manual_review": 50.0
+      }
+    }
+  },
+  "medium_threshold_objective": "highest validation threshold retaining at least 70% recall",
+  "automatic_financial_action": false
+}

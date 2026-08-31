@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-27T13:59:05.304846+00:00",
+  "dataset": "IEEE-CIS Fraud Detection train_transaction + train_identity",
+  "training_rows": 413378,
+  "calibration_rows": 44290,
+  "selection_rows": 44291,
+  "locked_test_rows": 88581,
+  "feature_count": 133,
+  "split": "chronological 70/7.5/7.5/15 (train/calibration/selection/locked-test)",
+  "candidate_validation_results": {
+    "logistic_sgd": {
+      "rows": 44291,
+      "fraud_rows": 1449,
+      "threshold": 1.0,
+      "precision": 0.165803,
+      "recall": 0.331263,
+      "f1": 0.220994,
+      "pr_auc": 0.1041,
+      "roc_auc": 0.716056,
+      "brier_score": 0.385969,
+      "false_positive_rate": 0.05637,
+      "false_negative_rate": 0.668737,
+      "alert_rate": 0.065363,
+      "confusion_matrix_tn_fp_fn_tp": [
+        40427,
+        2415,
+        969,
+        480
+      ],
+      "training_seconds": 6.894
+    },
+    "random_forest": {
+      "rows": 44291,
+      "fraud_rows": 1449,
+      "threshold": 0.580299,
+      "precision": 0.457035,
+      "recall": 0.334023,
+      "f1": 0.385965,
+      "pr_auc": 0.38014,
+      "roc_auc": 0.858775,
+      "brier_score": 0.053171,
+      "false_positive_rate": 0.013421,
+      "false_negative_rate": 0.665977,
+      "alert_rate": 0.02391,
+      "confusion_matrix_tn_fp_fn_tp": [
+        42267,
+        575,
+        965,
+        484
+      ],
+      "training_seconds": 25.176
+    },
+    "hist_gradient_boosting": {
+      "rows": 44291,
+      "fraud_rows": 1449,
+      "threshold": 0.810372,
+      "precision": 0.488105,
+      "recall": 0.410628,
+      "f1": 0.446027,
+      "pr_auc": 0.445273,
+      "roc_auc": 0.889942,
+      "brier_score": 0.082372,
+      "false_positive_rate": 0.014565,
+      "false_negative_rate": 0.589372,
+      "alert_rate": 0.027523,
+      "confusion_matrix_tn_fp_fn_tp": [
+        42218,
+        624,
+        854,
+        595
+      ],
+      "training_seconds": 17.337
+    }
+  },
+  "selection_metric": "validation PR-AUC",
+  "selected_model": "hist_gradient_boosting",
+  "calibration": "Platt sigmoid fitted on first half of validation window",
+  "thresholds": {
+    "f1_optimal": 0.240867,
+    "cost_optimal": 0.021144,
+    "validation_cost_at_cost_optimal": 2549700.0,
+    "illustrative_costs_inr": {
+      "false_positive": 100,
+      "false_negative": 5000,
+      "review": 50
+    }
+  },
+  "locked_test_f1_threshold": {
+    "rows": 88581,
+    "fraud_rows": 3083,
+    "threshold": 0.240867,
+    "precision": 0.495559,
+    "recall": 0.434317,
+    "f1": 0.462921,
+    "pr_auc": 0.476251,
+    "roc_auc": 0.891821,
+    "brier_score": 0.023885,
+    "false_positive_rate": 0.015942,
+    "false_negative_rate": 0.565683,
+    "alert_rate": 0.030503,
+    "confusion_matrix_tn_fp_fn_tp": [
+      84135,
+      1363,
+      1744,
+      1339
+    ]
+  },
+  "locked_test_cost_threshold": {
+    "rows": 88581,
+    "fraud_rows": 3083,
+    "threshold": 0.021144,
+    "precision": 0.129774,
+    "recall": 0.833279,
+    "f1": 0.224573,
+    "pr_auc": 0.476251,
+    "roc_auc": 0.891821,
+    "brier_score": 0.023885,
+    "false_positive_rate": 0.20149,
+    "false_negative_rate": 0.166721,
+    "alert_rate": 0.223479,
+    "confusion_matrix_tn_fp_fn_tp": [
+      68271,
+      17227,
+      514,
+      2569
+    ]
+  },
+  "artifact": "ml/models/real/ieee_cis_v1/model.joblib",
+  "elapsed_seconds": 74.024,
+  "promotion_status": "candidate_only_not_connected_to_production_api"
+}

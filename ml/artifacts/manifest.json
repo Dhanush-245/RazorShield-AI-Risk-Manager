@@ -1,0 +1,290 @@
+{
+  "schema_version": 4,
+  "created_at": "2026-08-28T11:27:51.477668+00:00",
+  "dataset": {
+    "provenance": "SYNTHETIC",
+    "generator_seed": 245,
+    "rows": 60000,
+    "train_rows": 36000,
+    "validation_rows": 12000,
+    "held_out_rows": 12000,
+    "split": "temporal_60_20_20",
+    "fusion_training": "five_fold_expanding_window_temporal_stacking",
+    "fusion_training_rows": 30000,
+    "leakage_policy": "Every stacking prediction is produced by models fitted only on earlier rows.",
+    "dataset_roles": {
+      "supervised_fraud": "Synthetic labelled transaction rows; demo validation only",
+      "anomaly": "Legitimate rows from the chronological training window only",
+      "behavioral_history": "Prior-only customer and recipient aggregates",
+      "relationship_graph": "Customer-device-location-recipient relationship features",
+      "application_testing": "Synthetic RazorShield records; not production training evidence"
+    }
+  },
+  "features": [
+    "amount",
+    "hour",
+    "transactions_5m",
+    "transactions_15m",
+    "transactions_1h",
+    "failed_attempts_10m",
+    "amount_deviation",
+    "new_device",
+    "new_location",
+    "shared_device_accounts",
+    "historical_return_rate",
+    "customer_age",
+    "account_age_days",
+    "historical_fraud_count",
+    "recipient_verified",
+    "recipient_used_before",
+    "recipient_risk_score",
+    "same_recipient_transactions_15m",
+    "amount_to_recipient_1h_ratio",
+    "customer_recipient_transactions",
+    "unique_customers_to_recipient",
+    "unique_devices_to_recipient",
+    "verified_education_context",
+    "unknown_recipient_high_amount"
+  ],
+  "feature_bounds": {
+    "shared_device_accounts": {
+      "minimum": 0,
+      "maximum": 20
+    },
+    "customer_age": {
+      "minimum": 13,
+      "maximum": 120
+    },
+    "recipient_risk_score": {
+      "minimum": 0,
+      "maximum": 1
+    },
+    "same_recipient_transactions_15m": {
+      "minimum": 0,
+      "maximum": 100
+    },
+    "unique_customers_to_recipient": {
+      "minimum": 0,
+      "maximum": 2000
+    },
+    "unique_devices_to_recipient": {
+      "minimum": 0,
+      "maximum": 2000
+    }
+  },
+  "fraud": {
+    "version": "fraud-v3",
+    "artifact": "fraud-v3.joblib",
+    "algorithm": "logistic_regression_probability",
+    "threshold": 0.2636,
+    "metrics": {
+      "precision": 0.4414,
+      "recall": 0.4275,
+      "f1": 0.4343,
+      "pr_auc": 0.4196,
+      "roc_auc": 0.8222,
+      "brier_score": 0.0708,
+      "false_positive_rate": 0.0586,
+      "false_negative_rate": 0.5725,
+      "confusion_matrix": [
+        [
+          10194,
+          634
+        ],
+        [
+          671,
+          501
+        ]
+      ]
+    }
+  },
+  "anomaly": {
+    "version": "anomaly-v3",
+    "artifact": "anomaly-v3.joblib",
+    "algorithm": "isolation_forest",
+    "contamination": 0.05,
+    "score_threshold": 0.5,
+    "metrics": {
+      "precision": 0.3183,
+      "recall": 0.2108,
+      "f1": 0.2536,
+      "pr_auc": 0.261,
+      "roc_auc": 0.7383,
+      "brier_score": 0.1685,
+      "false_positive_rate": 0.0489,
+      "false_negative_rate": 0.7892,
+      "confusion_matrix": [
+        [
+          10299,
+          529
+        ],
+        [
+          925,
+          247
+        ]
+      ]
+    },
+    "evaluation_role": "Held-out diagnostic against fraud labels; anomaly remains supporting evidence."
+  },
+  "fusion": {
+    "version": "fusion-v3",
+    "artifact": "fusion-v3.joblib",
+    "algorithm": "logistic_regression_on_out_of_fold_component_signals",
+    "components": [
+      "fraud",
+      "anomaly",
+      "behavior",
+      "velocity",
+      "graph",
+      "context_rules"
+    ],
+    "medium_threshold": 0.1017,
+    "high_threshold": 0.1492,
+    "threshold_selection": {
+      "medium": "maximum validation F2 with a calibrated probability floor of 0.10",
+      "high": "maximum validation F1",
+      "business_cost": "minimum validation cost using configured false-positive, false-negative, and review costs"
+    },
+    "metrics": {
+      "precision": 0.3623,
+      "recall": 0.5222,
+      "f1": 0.4278,
+      "pr_auc": 0.4118,
+      "roc_auc": 0.8135,
+      "brier_score": 0.0719,
+      "false_positive_rate": 0.0995,
+      "false_negative_rate": 0.4778,
+      "confusion_matrix": [
+        [
+          9751,
+          1077
+        ],
+        [
+          560,
+          612
+        ]
+      ]
+    },
+    "medium_metrics": {
+      "precision": 0.2849,
+      "recall": 0.6323,
+      "f1": 0.3928,
+      "pr_auc": 0.4118,
+      "roc_auc": 0.8135,
+      "brier_score": 0.0719,
+      "false_positive_rate": 0.1718,
+      "false_negative_rate": 0.3677,
+      "confusion_matrix": [
+        [
+          8968,
+          1860
+        ],
+        [
+          431,
+          741
+        ]
+      ]
+    },
+    "age_slice_evaluation": {
+      "under_18": {
+        "rows": 414,
+        "observed_fraud_rate": 0.1014,
+        "average_predicted_risk": 0.1043,
+        "alert_rate": 0.1329,
+        "recall": 0.5476,
+        "false_positive_rate": 0.086
+      },
+      "18_to_25": {
+        "rows": 1600,
+        "observed_fraud_rate": 0.0894,
+        "average_predicted_risk": 0.1,
+        "alert_rate": 0.1394,
+        "recall": 0.5175,
+        "false_positive_rate": 0.1023
+      },
+      "26_plus": {
+        "rows": 9986,
+        "observed_fraud_rate": 0.0988,
+        "average_predicted_risk": 0.097,
+        "alert_rate": 0.1413,
+        "recall": 0.5218,
+        "false_positive_rate": 0.0996
+      }
+    },
+    "business_cost_analysis": {
+      "currency": "INR",
+      "illustrative_costs": {
+        "false_positive": 100.0,
+        "false_negative": 5000.0,
+        "manual_review": 50.0
+      },
+      "validation_at_cost_threshold": {
+        "threshold": 0.039832,
+        "true_negative": 3896,
+        "false_positive": 6969,
+        "false_negative": 72,
+        "true_positive": 1063,
+        "manual_reviews": 8032,
+        "total_cost_inr": 1458500.0,
+        "cost_per_transaction_inr": 121.54
+      },
+      "locked_test_at_f1_threshold": {
+        "threshold": 0.149218,
+        "true_negative": 9751,
+        "false_positive": 1077,
+        "false_negative": 560,
+        "true_positive": 612,
+        "manual_reviews": 1689,
+        "total_cost_inr": 2992150.0,
+        "cost_per_transaction_inr": 249.35
+      },
+      "locked_test_at_cost_threshold": {
+        "threshold": 0.039832,
+        "true_negative": 3860,
+        "false_positive": 6968,
+        "false_negative": 68,
+        "true_positive": 1104,
+        "manual_reviews": 8072,
+        "total_cost_inr": 1440400.0,
+        "cost_per_transaction_inr": 120.03
+      },
+      "locked_test_always_allow_baseline": {
+        "threshold": 0.5,
+        "true_negative": 10828,
+        "false_positive": 0,
+        "false_negative": 1172,
+        "true_positive": 0,
+        "manual_reviews": 0,
+        "total_cost_inr": 5860000.0,
+        "cost_per_transaction_inr": 488.33
+      },
+      "limitation": "Costs are illustrative configuration inputs, not claimed prevented loss."
+    }
+  },
+  "return": {
+    "version": "return-v3",
+    "artifact": "return-v3.joblib",
+    "algorithm": "logistic_regression_probability",
+    "threshold": 0.1094,
+    "metrics": {
+      "precision": 0.1545,
+      "recall": 0.4059,
+      "f1": 0.2238,
+      "pr_auc": 0.1572,
+      "roc_auc": 0.6542,
+      "brier_score": 0.0757,
+      "false_positive_rate": 0.2063,
+      "false_negative_rate": 0.5941,
+      "confusion_matrix": [
+        [
+          8715,
+          2265
+        ],
+        [
+          606,
+          414
+        ]
+      ]
+    }
+  }
+}

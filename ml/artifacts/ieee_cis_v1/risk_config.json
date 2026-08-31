@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "model_version": "ieee-cis-hgb-v1",
+  "active_profile": "balanced_f1",
+  "low_threshold": 0.045028,
+  "high_threshold": 0.240867,
+  "review_threshold": 0.240867,
+  "profiles": {
+    "balanced_f1": {
+      "threshold": 0.240867,
+      "objective": "maximum validation F1"
+    },
+    "cost_sensitive": {
+      "threshold": 0.021144,
+      "objective": "minimum illustrative validation business cost",
+      "costs_inr": {
+        "false_positive": 100.0,
+        "false_negative": 5000.0,
+        "manual_review": 50.0
+      }
+    }
+  },
+  "medium_threshold_objective": "highest validation threshold retaining at least 70% recall",
+  "automatic_financial_action": false
+}

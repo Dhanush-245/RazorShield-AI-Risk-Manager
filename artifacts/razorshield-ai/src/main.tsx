@@ -1,11 +1,21 @@
-import { createRoot } from 'react-dom/client';
+import { createRoot } from "react-dom/client";
+import {
+  setAuthTokenGetter,
+  setBaseUrl,
+  setUnauthorizedHandler,
+} from "@workspace/api-client-react";
 
-import App from './App';
-import { ErrorBoundary } from '@/components/error-boundary';
+import App from "./App";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { expireSession } from "@/lib/session";
 
-import './index.css';
+import "./index.css";
 
-createRoot(document.getElementById('root')!, {
+setBaseUrl(import.meta.env.VITE_API_BASE_URL ?? null);
+setAuthTokenGetter(() => sessionStorage.getItem("razorshield_access_token"));
+setUnauthorizedHandler(expireSession);
+
+createRoot(document.getElementById("root")!, {
   // Keeps caught errors off reportError(), which would raise the dev overlay.
   onCaughtError: (error, errorInfo) => {
     console.error(error, errorInfo.componentStack);

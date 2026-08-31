@@ -1,0 +1,5 @@
+# Preserve checksummed dataset/artifact bytes; allow their existing line endings.
+examples/openml-42397-razorshield-test.csv -text whitespace=cr-at-eol
+ml/artifacts/ieee_cis_*/MODEL_CARD.md -text whitespace=-blank-at-eol
+*.joblib binary
+*.pkl binary

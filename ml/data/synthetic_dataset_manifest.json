@@ -1,0 +1,19 @@
+{
+  "provenance": "SYNTHETIC",
+  "generator_seed": 245,
+  "rows": 60000,
+  "train_rows": 36000,
+  "validation_rows": 12000,
+  "held_out_rows": 12000,
+  "split": "temporal_60_20_20",
+  "fusion_training": "five_fold_expanding_window_temporal_stacking",
+  "fusion_training_rows": 30000,
+  "leakage_policy": "Every stacking prediction is produced by models fitted only on earlier rows.",
+  "dataset_roles": {
+    "supervised_fraud": "Synthetic labelled transaction rows; demo validation only",
+    "anomaly": "Legitimate rows from the chronological training window only",
+    "behavioral_history": "Prior-only customer and recipient aggregates",
+    "relationship_graph": "Customer-device-location-recipient relationship features",
+    "application_testing": "Synthetic RazorShield records; not production training evidence"
+  }
+}

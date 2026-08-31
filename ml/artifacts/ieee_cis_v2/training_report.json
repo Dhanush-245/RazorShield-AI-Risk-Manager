@@ -1,0 +1,381 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-29T04:15:16.549912+00:00",
+  "dataset": "IEEE-CIS Fraud Detection train_transaction + train_identity",
+  "training_rows": 413378,
+  "calibration_rows": 44290,
+  "selection_rows": 44291,
+  "locked_test_rows": 88581,
+  "feature_count": 133,
+  "split": "chronological 70/7.5/7.5/15 (train/calibration/selection/locked-test)",
+  "candidate_validation_results": {
+    "logistic_sgd": {
+      "rows": 44291,
+      "fraud_rows": 1449,
+      "threshold": 0.088011,
+      "precision": 0.088926,
+      "recall": 0.545894,
+      "f1": 0.152939,
+      "pr_auc": 0.071746,
+      "roc_auc": 0.698523,
+      "brier_score": 0.031072,
+      "false_positive_rate": 0.18916,
+      "false_negative_rate": 0.454106,
+      "alert_rate": 0.200831,
+      "confusion_matrix_tn_fp_fn_tp": [
+        34738,
+        8104,
+        658,
+        791
+      ],
+      "capacity_operating_point": {
+        "rows": 44291,
+        "fraud_rows": 1449,
+        "threshold": 0.088011,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "pr_auc": 0.071746,
+        "roc_auc": 0.698523,
+        "brier_score": 0.031072,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 1.0,
+        "alert_rate": 0.0,
+        "confusion_matrix_tn_fp_fn_tp": [
+          42842,
+          0,
+          1449,
+          0
+        ],
+        "business_cost_inr": 7245000.0,
+        "acceptance": {
+          "targets": {
+            "recall": 0.85,
+            "precision": 0.8,
+            "maximum_review_rate": 0.05
+          },
+          "checks": {
+            "recall_at_least_85_percent": false,
+            "precision_at_least_80_percent": false,
+            "review_rate_at_most_5_percent": true
+          },
+          "all_targets_met": false
+        }
+      },
+      "training_seconds": 6.515
+    },
+    "random_forest": {
+      "rows": 44291,
+      "fraud_rows": 1449,
+      "threshold": 0.261843,
+      "precision": 0.457035,
+      "recall": 0.334023,
+      "f1": 0.385965,
+      "pr_auc": 0.38014,
+      "roc_auc": 0.858775,
+      "brier_score": 0.025019,
+      "false_positive_rate": 0.013421,
+      "false_negative_rate": 0.665977,
+      "alert_rate": 0.02391,
+      "confusion_matrix_tn_fp_fn_tp": [
+        42267,
+        575,
+        965,
+        484
+      ],
+      "capacity_operating_point": {
+        "rows": 44291,
+        "fraud_rows": 1449,
+        "threshold": 0.159184,
+        "precision": 0.339175,
+        "recall": 0.414079,
+        "f1": 0.372902,
+        "pr_auc": 0.38014,
+        "roc_auc": 0.858775,
+        "brier_score": 0.025019,
+        "false_positive_rate": 0.027286,
+        "false_negative_rate": 0.585921,
+        "alert_rate": 0.03994,
+        "confusion_matrix_tn_fp_fn_tp": [
+          41673,
+          1169,
+          849,
+          600
+        ],
+        "business_cost_inr": 4450350.0,
+        "acceptance": {
+          "targets": {
+            "recall": 0.85,
+            "precision": 0.8,
+            "maximum_review_rate": 0.05
+          },
+          "checks": {
+            "recall_at_least_85_percent": false,
+            "precision_at_least_80_percent": false,
+            "review_rate_at_most_5_percent": true
+          },
+          "all_targets_met": false
+        }
+      },
+      "training_seconds": 25.59
+    },
+    "hist_gradient_boosting": {
+      "rows": 44291,
+      "fraud_rows": 1449,
+      "threshold": 0.240867,
+      "precision": 0.488105,
+      "recall": 0.410628,
+      "f1": 0.446027,
+      "pr_auc": 0.445273,
+      "roc_auc": 0.889942,
+      "brier_score": 0.023338,
+      "false_positive_rate": 0.014565,
+      "false_negative_rate": 0.589372,
+      "alert_rate": 0.027523,
+      "confusion_matrix_tn_fp_fn_tp": [
+        42218,
+        624,
+        854,
+        595
+      ],
+      "capacity_operating_point": {
+        "rows": 44291,
+        "fraud_rows": 1449,
+        "threshold": 0.170045,
+        "precision": 0.39375,
+        "recall": 0.478261,
+        "f1": 0.43191,
+        "pr_auc": 0.445273,
+        "roc_auc": 0.889942,
+        "brier_score": 0.023338,
+        "false_positive_rate": 0.024905,
+        "false_negative_rate": 0.521739,
+        "alert_rate": 0.039737,
+        "confusion_matrix_tn_fp_fn_tp": [
+          41775,
+          1067,
+          756,
+          693
+        ],
+        "business_cost_inr": 3974700.0,
+        "acceptance": {
+          "targets": {
+            "recall": 0.85,
+            "precision": 0.8,
+            "maximum_review_rate": 0.05
+          },
+          "checks": {
+            "recall_at_least_85_percent": false,
+            "precision_at_least_80_percent": false,
+            "review_rate_at_most_5_percent": true
+          },
+          "all_targets_met": false
+        }
+      },
+      "training_seconds": 16.732
+    },
+    "xgboost": {
+      "rows": 44291,
+      "fraud_rows": 1449,
+      "threshold": 0.211866,
+      "precision": 0.52145,
+      "recall": 0.486542,
+      "f1": 0.503392,
+      "pr_auc": 0.513628,
+      "roc_auc": 0.909535,
+      "brier_score": 0.021608,
+      "false_positive_rate": 0.015102,
+      "false_negative_rate": 0.513458,
+      "alert_rate": 0.030525,
+      "confusion_matrix_tn_fp_fn_tp": [
+        42195,
+        647,
+        744,
+        705
+      ],
+      "capacity_operating_point": {
+        "rows": 44291,
+        "fraud_rows": 1449,
+        "threshold": 0.151543,
+        "precision": 0.44136,
+        "recall": 0.537612,
+        "f1": 0.484754,
+        "pr_auc": 0.513628,
+        "roc_auc": 0.909535,
+        "brier_score": 0.021608,
+        "false_positive_rate": 0.023015,
+        "false_negative_rate": 0.462388,
+        "alert_rate": 0.03985,
+        "confusion_matrix_tn_fp_fn_tp": [
+          41856,
+          986,
+          670,
+          779
+        ],
+        "business_cost_inr": 3536850.0,
+        "acceptance": {
+          "targets": {
+            "recall": 0.85,
+            "precision": 0.8,
+            "maximum_review_rate": 0.05
+          },
+          "checks": {
+            "recall_at_least_85_percent": false,
+            "precision_at_least_80_percent": false,
+            "review_rate_at_most_5_percent": true
+          },
+          "all_targets_met": false
+        }
+      },
+      "training_seconds": 12.933
+    },
+    "lightgbm": {
+      "rows": 44291,
+      "fraud_rows": 1449,
+      "threshold": 0.292638,
+      "precision": 0.571152,
+      "recall": 0.407177,
+      "f1": 0.475423,
+      "pr_auc": 0.480558,
+      "roc_auc": 0.901278,
+      "brier_score": 0.022405,
+      "false_positive_rate": 0.01034,
+      "false_negative_rate": 0.592823,
+      "alert_rate": 0.023323,
+      "confusion_matrix_tn_fp_fn_tp": [
+        42399,
+        443,
+        859,
+        590
+      ],
+      "capacity_operating_point": {
+        "rows": 44291,
+        "fraud_rows": 1449,
+        "threshold": 0.168589,
+        "precision": 0.409938,
+        "recall": 0.501035,
+        "f1": 0.450932,
+        "pr_auc": 0.480558,
+        "roc_auc": 0.901278,
+        "brier_score": 0.022405,
+        "false_positive_rate": 0.024392,
+        "false_negative_rate": 0.498965,
+        "alert_rate": 0.039986,
+        "confusion_matrix_tn_fp_fn_tp": [
+          41797,
+          1045,
+          723,
+          726
+        ],
+        "business_cost_inr": 3808050.0,
+        "acceptance": {
+          "targets": {
+            "recall": 0.85,
+            "precision": 0.8,
+            "maximum_review_rate": 0.05
+          },
+          "checks": {
+            "recall_at_least_85_percent": false,
+            "precision_at_least_80_percent": false,
+            "review_rate_at_most_5_percent": true
+          },
+          "all_targets_met": false
+        }
+      },
+      "training_seconds": 12.049
+    }
+  },
+  "selection_metric": "minimum validation business cost at a 4% operating review rate, reserving headroom below the 5% hard capacity",
+  "selected_model": "xgboost",
+  "calibration": "Platt sigmoid fitted on first half of validation window",
+  "thresholds": {
+    "f1_optimal": 0.211866,
+    "cost_optimal": 0.02103,
+    "validation_cost_at_cost_optimal": 2292450.0,
+    "capacity_constrained_cost_optimal": 0.151543,
+    "validation_cost_at_capacity_constrained_optimal": 3536850.0,
+    "maximum_review_rate": 0.05,
+    "operating_review_rate": 0.04,
+    "illustrative_costs_inr": {
+      "false_positive": 100,
+      "false_negative": 5000,
+      "review": 50
+    }
+  },
+  "locked_test_f1_threshold": {
+    "rows": 88581,
+    "fraud_rows": 3083,
+    "threshold": 0.211866,
+    "precision": 0.503755,
+    "recall": 0.522219,
+    "f1": 0.512821,
+    "pr_auc": 0.536191,
+    "roc_auc": 0.909001,
+    "brier_score": 0.022377,
+    "false_positive_rate": 0.01855,
+    "false_negative_rate": 0.477781,
+    "alert_rate": 0.03608,
+    "confusion_matrix_tn_fp_fn_tp": [
+      83912,
+      1586,
+      1473,
+      1610
+    ]
+  },
+  "locked_test_cost_threshold": {
+    "rows": 88581,
+    "fraud_rows": 3083,
+    "threshold": 0.02103,
+    "precision": 0.140428,
+    "recall": 0.849173,
+    "f1": 0.241002,
+    "pr_auc": 0.536191,
+    "roc_auc": 0.909001,
+    "brier_score": 0.022377,
+    "false_positive_rate": 0.187431,
+    "false_negative_rate": 0.150827,
+    "alert_rate": 0.210463,
+    "confusion_matrix_tn_fp_fn_tp": [
+      69473,
+      16025,
+      465,
+      2618
+    ]
+  },
+  "locked_test_capacity_threshold": {
+    "rows": 88581,
+    "fraud_rows": 3083,
+    "threshold": 0.151543,
+    "precision": 0.429407,
+    "recall": 0.571197,
+    "f1": 0.490256,
+    "pr_auc": 0.536191,
+    "roc_auc": 0.909001,
+    "brier_score": 0.022377,
+    "false_positive_rate": 0.027369,
+    "false_negative_rate": 0.428803,
+    "alert_rate": 0.046297,
+    "confusion_matrix_tn_fp_fn_tp": [
+      83158,
+      2340,
+      1322,
+      1761
+    ]
+  },
+  "locked_test_acceptance": {
+    "targets": {
+      "recall": 0.85,
+      "precision": 0.8,
+      "maximum_review_rate": 0.05
+    },
+    "checks": {
+      "recall_at_least_85_percent": false,
+      "precision_at_least_80_percent": false,
+      "review_rate_at_most_5_percent": true
+    },
+    "all_targets_met": false
+  },
+  "artifact": "ml/models/real/ieee_cis_v2/model.joblib",
+  "elapsed_seconds": 98.216,
+  "promotion_status": "candidate_only_not_connected_to_production_api"
+}

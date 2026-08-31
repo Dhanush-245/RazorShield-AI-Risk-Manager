@@ -1,0 +1,136 @@
+[
+  {
+    "id": "normal_transaction",
+    "input": {
+      "transaction_id": "GOLDEN-NORMAL",
+      "customer_id": "CUS-NORMAL",
+      "merchant_id": "MER-GOLDEN",
+      "amount": 2000,
+      "customer_average_amount": 2500,
+      "account_age_days": 900,
+      "recipient_category": "UTILITY",
+      "recipient_verified": true,
+      "recipient_used_before": true,
+      "recipient_risk_score": 0.05,
+      "transactions_last_5_minutes": 1,
+      "transactions_last_hour": 2
+    },
+    "expected": {"levels": ["LOW"], "maximum_score": 39}
+  },
+  {
+    "id": "legitimate_education_fee",
+    "input": {
+      "transaction_id": "GOLDEN-EDUCATION",
+      "customer_id": "CUS-STUDENT",
+      "merchant_id": "MER-GOLDEN",
+      "amount": 120000,
+      "customer_average_amount": 100000,
+      "customer_age": 21,
+      "account_age_days": 1095,
+      "recipient_id": "VERIFIED-UNIVERSITY",
+      "recipient_category": "EDUCATION",
+      "transaction_intent": "EDUCATION",
+      "recipient_verified": true,
+      "recipient_used_before": true,
+      "customer_recipient_transactions": 4,
+      "recipient_risk_score": 0.08,
+      "transactions_last_5_minutes": 1
+    },
+    "expected": {
+      "levels": ["LOW", "MEDIUM"],
+      "maximum_score": 69,
+      "required_rules": ["VERIFIED_EDUCATION_CONTEXT"]
+    }
+  },
+  {
+    "id": "suspicious_high_value",
+    "input": {
+      "transaction_id": "GOLDEN-SUSPICIOUS",
+      "customer_id": "CUS-STUDENT",
+      "merchant_id": "MER-GOLDEN",
+      "amount": 120000,
+      "customer_average_amount": 5000,
+      "recipient_id": "UNKNOWN-RECIPIENT",
+      "recipient_category": "UNKNOWN",
+      "recipient_verified": false,
+      "recipient_used_before": false,
+      "recipient_risk_score": 0.9,
+      "transactions_last_5_minutes": 8,
+      "transactions_last_15_minutes": 8,
+      "transactions_last_hour": 20,
+      "transactions_to_same_recipient_last_15_minutes": 8,
+      "failed_attempts_last_10_minutes": 4,
+      "shared_device_accounts": 6,
+      "is_new_device": true,
+      "is_new_location": true
+    },
+    "expected": {
+      "levels": ["HIGH"],
+      "minimum_score": 70,
+      "required_rules": ["VELOCITY_ALERT", "UNKNOWN_RECIPIENT_HIGH_AMOUNT", "HIGH_RISK_RECIPIENT"]
+    }
+  },
+  {
+    "id": "repeated_recipient_burst",
+    "input": {
+      "transaction_id": "GOLDEN-BURST",
+      "customer_id": "CUS-BURST",
+      "merchant_id": "MER-GOLDEN",
+      "amount": 8000,
+      "customer_average_amount": 5000,
+      "recipient_id": "RISKY-RECIPIENT",
+      "recipient_verified": false,
+      "recipient_risk_score": 0.8,
+      "transactions_last_5_minutes": 8,
+      "transactions_last_15_minutes": 10,
+      "transactions_last_hour": 25,
+      "transactions_to_same_recipient_last_15_minutes": 8
+    },
+    "expected": {
+      "levels": ["HIGH"],
+      "minimum_score": 70,
+      "required_rules": ["SAME_RECIPIENT_BURST", "HIGH_RISK_RECIPIENT"]
+    }
+  },
+  {
+    "id": "known_customer_normal_behavior",
+    "input": {
+      "transaction_id": "GOLDEN-KNOWN",
+      "customer_id": "CUS-KNOWN",
+      "merchant_id": "MER-GOLDEN",
+      "amount": 4800,
+      "customer_average_amount": 5000,
+      "account_age_days": 2000,
+      "recipient_id": "KNOWN-UTILITY",
+      "recipient_category": "UTILITY",
+      "recipient_verified": true,
+      "recipient_used_before": true,
+      "customer_recipient_transactions": 20,
+      "recipient_risk_score": 0.02,
+      "transactions_last_5_minutes": 1,
+      "transactions_last_hour": 3,
+      "is_new_device": false,
+      "is_new_location": false
+    },
+    "expected": {"levels": ["LOW"], "maximum_score": 39}
+  },
+  {
+    "id": "adversarial_out_of_distribution",
+    "input": {
+      "transaction_id": "GOLDEN-OOD",
+      "customer_id": "CUS-OOD",
+      "merchant_id": "MER-GOLDEN",
+      "amount": 999999999,
+      "customer_average_amount": 1,
+      "recipient_risk_score": 1,
+      "transactions_last_5_minutes": 10000,
+      "transactions_last_15_minutes": 100000,
+      "transactions_last_hour": 100000,
+      "failed_attempts_last_10_minutes": 10000,
+      "shared_device_accounts": 10000,
+      "is_new_device": true,
+      "is_new_location": true
+    },
+    "expected": {"levels": ["HIGH"], "minimum_score": 70}
+  }
+]

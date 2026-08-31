@@ -1,0 +1,24 @@
+{
+  "dataset": "OpenML 42397 CreditCardFraudDetection v2",
+  "openml_page": "https://www.openml.org/d/42397",
+  "metadata_api": "https://www.openml.org/api/v1/json/data/42397",
+  "source_download": "https://openml.org/data/v1/download/21829702/CreditCardFraudDetection.arff",
+  "citation": "Andrea Dal Pozzolo, Olivier Caelen, Reid A. Johnson and Gianluca Bontempi. Calibrating Probability with Undersampling for Unbalanced Classification. IEEE CIDM, 2015.",
+  "complete_source_rows_processed": 255205,
+  "source_fraud_rows_seen": 468,
+  "sample_rows": 240,
+  "sample_source_labels": {
+    "fraud": 21,
+    "legitimate": 219
+  },
+  "adapter_proxy_bands": {
+    "high": 80,
+    "medium": 80,
+    "low": 80
+  },
+  "class_label_used_for_scoring": false,
+  "adapter": "Time and Amount are retained. PCA values only create deterministic pseudonymous customer/device/location buckets; rolling velocity, customer average and novelty are derived from those buckets. Shared-device risk is set to zero because bucket collisions are not real identity links. Missing failed-attempt and return-outcome fields are also set to zero. Source Class is used only to stratify the sample.",
+  "limitation": "This is an end-to-end pipeline stress test, not a model-accuracy evaluation. Pseudonymous entity buckets are adapter constructs, not original cardholder identities.",
+  "csv_sha256": "e6f5632c2b02f4fb532e51b1aba4c15962910a4d2ae9a6fd4af1f4c947ac5ae2",
+  "generated_at": "2026-08-25T10:38:57.166246+00:00"
+}

@@ -1,0 +1,37 @@
+{
+  "environment": "isolated local SQLite API; concurrency 20",
+  "result": "PASS_WITHIN_1_PERCENT_ERROR_BUDGET",
+  "defectFoundAndFixed": "Concurrent default rule configuration initialization",
+  "levels": [
+    {
+      "transactions": 10,
+      "throughputPerSecond": 40.67,
+      "latencyP50Ms": 73.604,
+      "latencyP95Ms": 244.493,
+      "errors": 0,
+      "errorRate": 0.0
+    },
+    {
+      "transactions": 100,
+      "throughputPerSecond": 87.94,
+      "latencyP50Ms": 82.783,
+      "latencyP95Ms": 936.878,
+      "errors": 0,
+      "errorRate": 0.0
+    },
+    {
+      "transactions": 1000,
+      "throughputPerSecond": 115.28,
+      "latencyP50Ms": 79.514,
+      "latencyP95Ms": 617.336,
+      "latencyP99Ms": 1539.188,
+      "errors": 1,
+      "errorRate": 0.001
+    }
+  ],
+  "limitations": [
+    "These are local SQLite results, not production capacity evidence.",
+    "The PostgreSQL CI job must pass before deployment.",
+    "A staging load test on production-equivalent infrastructure is still required."
+  ]
+}
