@@ -14,7 +14,6 @@ user_role = sa.Enum("ADMIN", "RISK_ANALYST", "REVIEWER", "VIEWER", name="user_ro
 
 
 def upgrade() -> None:
-    user_role.create(op.get_bind(), checkfirst=True)
     op.create_table(
         "merchants",
         sa.Column("id", sa.String(length=36), nullable=False),
