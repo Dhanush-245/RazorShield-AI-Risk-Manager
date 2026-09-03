@@ -14,6 +14,10 @@ test("submission rehearsal: low/high risk, parties, bounded investigation, human
   expect(login.ok()).toBeTruthy();
   const auth = await login.json();
   const headers = { Authorization: `Bearer ${auth.access_token}` };
+  const transactionIds = {
+    LOW: `SUBMISSION-LOW-R${testInfo.retry}`,
+    HIGH: `SUBMISSION-HIGH-R${testInfo.retry}`,
+  } as const;
   const results = [];
   for (const [id, suffix, expectedLevels] of [
     ["normal_transaction", "LOW", ["LOW", "MEDIUM"]],
@@ -24,7 +28,7 @@ test("submission rehearsal: low/high risk, parties, bounded investigation, human
       headers,
       data: {
         ...fixture.input,
-        transaction_id: `SUBMISSION-${suffix}`,
+        transaction_id: transactionIds[suffix],
         customer_id: `SUBMISSION-CUSTOMER-${suffix}`,
         merchant_id: auth.user.merchant_id,
         customer_name: "Mira Demo",
@@ -37,8 +41,10 @@ test("submission rehearsal: low/high risk, parties, bounded investigation, human
         recipient_bank_name: "Synthetic Receiver Bank",
         recipient_bank_ifsc: "DEMO0000002",
         recipient_email: "receiver@example.invalid",
-        device_id: `DEMO-DEVICE-${suffix}`,
-        location: suffix === "LOW" ? "Hyderabad" : "Mumbai",
+        // Missing device/location is uncertainty, not novelty. Only the
+        // suspicious case asserts a newly observed device and location.
+        device_id: suffix === "HIGH" ? "DEMO-DEVICE-HIGH" : undefined,
+        location: suffix === "HIGH" ? "Mumbai" : undefined,
       },
     });
     expect(result.status()).toBe(201);
@@ -63,14 +69,14 @@ test("submission rehearsal: low/high risk, parties, bounded investigation, human
   await expect(page.getByText("Risk overview", { exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("dashboard.png") });
 
-  await page.goto("/investigations/SUBMISSION-LOW");
+  await page.goto(`/investigations/${transactionIds.LOW}`);
   await expect(page.getByRole("heading", { name: "Evidence review", exact: true })).toBeVisible();
   await expect(page.getByText("Funds flow", { exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("low-risk.png") });
 
   const agentResponse = page.waitForResponse(response =>
-    response.url().includes("/agent/investigate/SUBMISSION-HIGH") && response.request().method() === "POST");
-  await page.goto("/investigations/SUBMISSION-HIGH");
+    response.url().includes(`/agent/investigate/${transactionIds.HIGH}`) && response.request().method() === "POST");
+  await page.goto(`/investigations/${transactionIds.HIGH}`);
   const agent = await (await agentResponse).json();
   expect(agent.executedFinancialAction).toBe(false);
   expect(agent.recommendation).toBe("MANUAL_REVIEW");
@@ -97,7 +103,7 @@ test("submission rehearsal: low/high risk, parties, bounded investigation, human
   ]));
   await page.getByRole("link", { name: "Verify audit event", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Audit trail", exact: true })).toBeVisible();
-  await expect(page.locator('[data-testid^="audit-event-"]').filter({ hasText: "CASE-SUBMISSION-HIGH" }).filter({ hasText: "Human Decision Escalated" })).toBeVisible();
+  await expect(page.locator('[data-testid^="audit-event-"]').filter({ hasText: `CASE-${transactionIds.HIGH}` }).filter({ hasText: "Human Decision Escalated" })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("audit.png") });
   // Reviewer navigation intentionally excludes monitoring. Use the analyst role for it.
   await expect(page.getByRole("link", { name: "Model monitoring", exact: true })).toHaveCount(0);
