@@ -158,6 +158,9 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+  # Express 5.2.1 permits qs 6.15.3, which is affected by GHSA-x5fp-wj9c-mxmx
+  # and GHSA-4mjr-xmp4-gh2g. Force the first release that fixes both advisories.
+  qs: "6.16.0"
 
 allowBuilds:
   esbuild: true

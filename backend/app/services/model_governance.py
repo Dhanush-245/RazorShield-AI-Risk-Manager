@@ -37,8 +37,10 @@ def ieee_cis_promotion_evidence() -> dict[str, Any]:
     locked = report.get("locked_test_f1_threshold", {})
     capacity = report.get("locked_test_capacity_threshold", {})
     acceptance = report.get("locked_test_acceptance", {})
+    data_usage = report.get("data_usage", {})
     gates = {
         "artifact_integrity": not integrity_failures,
+        "commercial_production_data_license": bool(data_usage.get("commercial_production_authorized", False)),
         "locked_temporal_test": (
             "chronological" in str(report.get("split", "")).lower()
             and int(report.get("locked_test_rows", 0)) >= 50_000
@@ -67,8 +69,18 @@ def ieee_cis_promotion_evidence() -> dict[str, Any]:
         "lockedTestMetrics": locked,
         "lockedCapacityMetrics": capacity,
         "businessAcceptance": acceptance,
+        "dataUsage": {
+            "commercialProductionAuthorized": bool(data_usage.get("commercial_production_authorized", False)),
+            "allowedPurposes": data_usage.get(
+                "allowed_purposes", ["competition", "academic research", "education"]
+            ),
+            "sourceRules": data_usage.get(
+                "source_rules",
+                "https://www.kaggle.com/competitions/ieee-fraud-detection/rules",
+            ),
+        },
         "warning": (
-            "Eligibility is not production approval. Representative merchant validation, capacity, "
-            "fairness, drift, and rollback sign-off remain required."
+            "Eligibility is not production approval. Commercial data rights, representative merchant "
+            "validation, capacity, fairness, drift, and rollback sign-off remain required."
         ),
     }

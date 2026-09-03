@@ -73,8 +73,12 @@ does not establish that remote CI passes.
 
 Local materials already prepared:
 
+- `outputs/submission/razorshield-recruiter-pitch-final-v2.mp4`: latest five-minute
+  continuous product recording, ordered for recruiter evaluation, with disclosed
+  AI narration using the preferred original voice and no bottom caption strip.
+- [Exact recruiter narration and timing](RECRUITER_PITCH_NARRATION.md).
 - `outputs/submission/razorshield-authentication-feature-tour-no-captions.mp4`:
-  latest preferred delivery, retaining the original synthetic voice without the bottom caption strip.
+  earlier authentication-first delivery, retaining the original synthetic voice without the bottom caption strip.
 - `outputs/submission/razorshield-authentication-feature-tour-original-voice.mp4`:
   preferred revision using the first draft's default synthetic voice with the new live tour.
 - `outputs/submission/razorshield-authentication-feature-tour-narrated.mp4`:
@@ -108,8 +112,8 @@ preserved user records, pre-existing enum reuse, and downgrade/re-upgrade safety
 
 A later GitHub Actions failure exposed an import-path dependency hidden by the
 local shell: tests could not import `ml`. Explicit pytest paths and module-based
-test invocation addressed that locally. The final local run passed 70 backend/ML
-tests and two browser tests. A new remote CI run is still required after publication.
+test invocation fixed it. GitHub Actions run `33718111412` now passes migrations,
+backend/ML tests, dependency audits, browser E2E, and both Docker builds.
 
 The lesson was that “works locally” is not sufficient evidence. The environment,
 migration history and verification command must be reproducible too.

@@ -76,6 +76,64 @@ def test_simulation_uses_model_without_persisting(client):
     )
 
 
+def test_recording_scenario_has_meaningful_counterfactuals(client):
+    """Protect the exact unsaturated case used by the five-minute recording."""
+
+    headers, _ = credentials(client)
+    payload, result = assess(
+        client,
+        headers,
+        name="Normal payment",
+        txn="DEMO-RISK-RECORDING",
+        customer_id="DEMO-CUSTOMER-RECORDING",
+        timestamp="2026-01-01T13:00:00Z",
+        amount=60_000,
+        customer_average_amount=20_000,
+        device_id="DEMO-NEW-DEVICE-01",
+        location="Delhi",
+        transactions_last_5_minutes=5,
+        transactions_last_15_minutes=7,
+        transactions_last_hour=15,
+        transactions_to_same_recipient_last_15_minutes=5,
+        failed_attempts_last_10_minutes=1,
+        shared_device_accounts=1,
+        recipient_id="DEMO-RECIPIENT-NEW",
+        recipient_category="UNKNOWN",
+        transaction_intent="UNKNOWN",
+        recipient_risk_score=0.2,
+        recipient_verified=False,
+        recipient_used_before=False,
+        is_new_device=True,
+        is_new_location=True,
+    )
+    assert result["risk_score"] == 98
+    assert result["risk_level"] == "HIGH"
+    assert result["recommended_action"] == "MANUAL_REVIEW"
+
+    compared = [
+        client.post(
+            "/api/v1/workbench/transactions/DEMO-RISK-RECORDING/counterfactuals",
+            headers=headers,
+        )
+        for _ in range(5)
+    ]
+    assert all(response.status_code == 200 for response in compared)
+    bodies = [response.json() for response in compared]
+    assert all(body == bodies[0] for body in bodies[1:])
+    body = bodies[0]
+    assert body["storedScore"] == body["baseline"]["score"] == 98
+    rows = {row["label"]: row for row in body["counterfactuals"]}
+    assert (rows["Velocity normal"]["score"], rows["Velocity normal"]["delta"]) == (82, -16)
+    assert (rows["All four assumptions"]["score"], rows["All four assumptions"]["delta"]) == (
+        22,
+        -76,
+    )
+    assert rows["All four assumptions"]["level"] == "LOW"
+    assert body["persisted"] is False
+    assert body["financialActionExecuted"] is False
+    assert payload["customer_id"] == "DEMO-CUSTOMER-RECORDING"
+
+
 def test_snapshot_replay_counterfactual_privacy_and_integrity(client):
     headers, _ = credentials(client)
     _, result = assess(client, headers, customer_name="Private name", customer_email="private@example.com")

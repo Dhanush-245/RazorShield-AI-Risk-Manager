@@ -1,4 +1,4 @@
-# Submission kit — 2026-08-31
+# Submission kit — 2026-09-03
 
 The goal is a defensible local demonstration, not an unsupported production claim.
 The [official Buildathon page](https://razorpay.com/buildathon/) requests a public
@@ -9,8 +9,12 @@ requirements in the [application form](https://forms.gle/d9r2gvxp8cmoZhon9).
 
 ## Ready locally
 
-- **Latest:** [Risk-operations demo and narration](RISK_OPERATIONS_NARRATION.md), with the original synthetic
-  voice setting and no bottom captions. Supersedes the older captioned tour below.
+- **Latest:** [Five-minute recruiter pitch](RECRUITER_PITCH_NARRATION.md), following the requested
+  problem → architecture → product → ML → security → debugging sequence, with the preferred
+  synthetic voice and no bottom captions. The verified local file is
+  `outputs/submission/razorshield-recruiter-pitch-final-v2.mp4`.
+- [Recruiter-pitch media verification](../verification/recruiter-pitch-2026-09-03.md).
+- [Earlier risk-operations demo and narration](RISK_OPERATIONS_NARRATION.md).
 - [Professional-upgrade coverage / technical decisions](../decisions.md) and [failures and fixes](../failures-and-fixes.md).
 
 - [Architecture](../ARCHITECTURE.md) and root README setup instructions.
@@ -31,10 +35,9 @@ requirements in the [application form](https://forms.gle/d9r2gvxp8cmoZhon9).
    GitHub's repository API. Review the publication diff and full history for
    secrets, private material and dataset licensing. Do not upload competition CSVs, candidate pickle
    files, merchant databases, `.env`, tokens or browser traces containing tokens.
-2. Local changes are not pushed. Remote CI run `33377187862` failed at Python test
-   collection (`No module named ml`). The local test-path fix passes without
-   PYTHONPATH, but only a new GitHub run can establish remote green status. Review
-   existing remote changes/PRs before publishing; never force-push over them.
+2. GitHub Actions run `33718111412` passed migrations, backend/ML tests, dependency
+   audits, TypeScript/build checks, browser E2E, and both Docker builds on commit
+   `f21a892`. The new recruiter-pitch source changes remain local and unpushed.
 3. Review the new **authentication-first continuous browser tour**, which uses
    visible recording captions. A separate `-narrated.mp4` now adds AI-generated
    narration at the owner's request; the silent original remains available.
@@ -57,7 +60,7 @@ requirements in the [application form](https://forms.gle/d9r2gvxp8cmoZhon9).
 - That risk-index or heuristic investigation “confidence” labels are calibrated
   likelihood of guilt. Risk scores and probabilities are different quantities.
 - That flagged transaction value or modeled cost reduction is realized loss prevention.
-- That Docker/cloud/security sign-off or remote CI passed because local tests passed.
+- That a passing Docker/CI/security scan is a production security certification.
 - That this kit was submitted or that users/revenue exist.
 
 ## New full feature-tour recording

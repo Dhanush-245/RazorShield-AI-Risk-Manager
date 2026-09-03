@@ -59,6 +59,9 @@ merchant-specific labelled data, temporal backtesting, calibration and fairness 
 
 The real-data workflow is deliberately separate from the bundled synthetic artifacts. It must not
 read the 1,000-row RazorShield application-test CSV and it does not overwrite `ml/artifacts/`.
+IEEE-CIS competition data is authorized only for the purposes stated in its Kaggle rules; it is a
+non-commercial benchmark, not a deployable commercial training source. Model governance therefore
+requires explicit commercial data authorization and fails closed when that evidence is absent.
 
 After accepting the IEEE-CIS Fraud Detection competition rules in Kaggle, place only these files in
 `ml/data/raw/`:

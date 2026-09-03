@@ -6098,6 +6098,7 @@ function AssessmentPage() {
   const [form, setForm] = useState({
     transaction_id: `TX-${Date.now().toString().slice(-6)}`,
     customer_id: "CUS-NEW",
+    timestamp: new Date().toISOString().slice(0, 16),
     amount: "42000",
     customer_average_amount: "3200",
     device_id: "DEV-NEW",
@@ -6218,6 +6219,7 @@ function AssessmentPage() {
       const payload = {
         ...form,
         merchant_id: user.merchant_id,
+        timestamp: `${form.timestamp}:00Z`,
         amount: Number(form.amount),
         customer_average_amount: Number(form.customer_average_amount),
         transactions_last_5_minutes: Number(form.transactions_last_5_minutes),
@@ -6476,6 +6478,26 @@ function AssessmentPage() {
               }}
               onSelect={selectCustomer}
             />
+            <div className="block sm:col-span-2">
+              <label
+                htmlFor="assessment-event-timestamp"
+                className="mb-2 block text-xs font-bold"
+              >
+                Event timestamp (UTC)
+              </label>
+              <input
+                id="assessment-event-timestamp"
+                value={form.timestamp}
+                onChange={(event) => update("timestamp", event.target.value)}
+                type="datetime-local"
+                step="60"
+                className="min-h-11 w-full border border-[var(--input-line)] bg-[var(--canvas)] px-3 text-sm outline-none focus:border-[var(--rust)]"
+                required
+              />
+              <span className="mt-1.5 block text-[10px] leading-4 text-[var(--muted-ink)]">
+                Explicit event time keeps replay and counterfactual inputs reproducible.
+              </span>
+            </div>
             {transactionQuery.isError && (
               <div
                 role="alert"

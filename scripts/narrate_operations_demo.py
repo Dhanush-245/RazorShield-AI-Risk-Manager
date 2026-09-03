@@ -37,6 +37,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--video", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--script",
+        type=Path,
+        default=ROOT / "docs/submission/RISK_OPERATIONS_NARRATION.md",
+    )
     args = parser.parse_args()
     report = args.output.with_suffix(".json")
     if args.output.exists() or report.exists():
@@ -44,7 +49,7 @@ def main():
     source = probe(args.video)
     if abs(float(source["format"]["duration"]) - 300) > 0.1:
         parser.error("Expected a verified five-minute source")
-    script = (ROOT / "docs/submission/RISK_OPERATIONS_NARRATION.md").read_text()
+    script = args.script.read_text()
     sections = []
     for sm, ss, em, es, title, text in re.findall(
         r"## (\d+):(\d+)–(\d+):(\d+) · ([^\n]+)\n\n“(.*?)”", script, re.DOTALL
@@ -57,8 +62,8 @@ def main():
                 "text": " ".join(text.split()),
             }
         )
-    if len(sections) != 12 or sections[-1]["end"] != 300:
-        raise ValueError("Expected twelve contiguous sections covering five minutes")
+    if not sections or sections[-1]["end"] != 300:
+        raise ValueError("Expected contiguous narration sections covering five minutes")
     work = Path(tempfile.mkdtemp(prefix="razorshield-operations-audio-"))
     parts = []
     for index, section in enumerate(sections):
@@ -105,7 +110,10 @@ def main():
         )
         section.update(rate=rate, spokenSeconds=duration)
         parts.append(part)
-        print(f"Narration {index + 1}/12: {duration:.1f}s at {rate} wpm", flush=True)
+        print(
+            f"Narration {index + 1}/{len(sections)}: {duration:.1f}s at {rate} wpm",
+            flush=True,
+        )
     concat = work / "concat.txt"
     concat.write_text("\n".join(f"file '{part}'" for part in parts))
     narration = work / "narration.wav"

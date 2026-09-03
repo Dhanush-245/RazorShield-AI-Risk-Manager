@@ -718,7 +718,15 @@ export function DecisionWorkbench({
 
 type Health = {
   modelVersion: string;
-  metrics: Record<string, number>;
+  metrics: {
+    precision: number;
+    recall: number;
+    f1: number;
+    pr_auc: number;
+    roc_auc: number;
+    false_positive_rate: number;
+    confusion_matrix: [[number, number], [number, number]];
+  };
   operatingPolicy: {
     mediumProbabilityThreshold: number;
     highProbabilityThreshold: number;
@@ -953,18 +961,21 @@ export function OperationsConsole({
             <>
               <Panel title="Deployed fusion — held-out evaluation">
                 <p className="text-sm font-mono">{data.modelVersion}</p>
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-                  {[
-                    ["Precision", "precision"],
-                    ["Recall", "recall"],
-                    ["F1", "f1"],
-                    ["PR-AUC", "pr_auc"],
-                    ["False-positive rate", "false_positive_rate"],
-                  ].map(([label, key]) => (
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+                  {(
+                    [
+                      ["Precision", "precision"],
+                      ["Recall", "recall"],
+                      ["F1", "f1"],
+                      ["PR-AUC", "pr_auc"],
+                      ["ROC-AUC", "roc_auc"],
+                      ["False-positive rate", "false_positive_rate"],
+                    ] as const
+                  ).map(([label, key]) => (
                     <div key={key}>
                       <p className="text-sm text-[var(--muted-ink)]">{label}</p>
                       <p className="font-display text-3xl">
-                        {percent(data.metrics[key])}
+                        {(data.metrics[key] * 100).toFixed(2)}%
                       </p>
                     </div>
                   ))}
@@ -974,6 +985,22 @@ export function OperationsConsole({
                   not accuracy on the live stream. Synthetic training is not
                   real-world validation.
                 </Notice>
+                <section className="border border-[var(--line)] p-4">
+                  <h3 className="font-semibold">Locked-test confusion matrix</h3>
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                    {[
+                      ["TN", data.metrics.confusion_matrix[0][0]],
+                      ["FP", data.metrics.confusion_matrix[0][1]],
+                      ["FN", data.metrics.confusion_matrix[1][0]],
+                      ["TP", data.metrics.confusion_matrix[1][1]],
+                    ].map(([label, value]) => (
+                      <p key={label}>
+                        <span className="text-[var(--muted-ink)]">{label}</span>{" "}
+                        <strong>{Number(value).toLocaleString("en-IN")}</strong>
+                      </p>
+                    ))}
+                  </div>
+                </section>
                 <details>
                   <summary className="cursor-pointer py-3">
                     Active cost and capacity operating policy

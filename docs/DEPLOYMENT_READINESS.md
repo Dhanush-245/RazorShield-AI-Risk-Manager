@@ -24,7 +24,8 @@ sign-off. A candidate or local pass is not represented as production approval.
 
 `ieee-cis-xgboost-v2` is **CANDIDATE_REJECTED_BY_GOVERNANCE**. It improves locked PR-AUC from
 47.63% to 53.62% and keeps the capacity profile below the 5% hard review limit, but it does not meet
-the requested recall/precision acceptance targets. Setting
+the requested recall/precision acceptance targets. The IEEE-CIS competition terms also do not
+authorize commercial production use, and this is now an explicit fail-closed promotion gate. Setting
 `RAZORSHIELD_IEEE_CIS_PROMOTION_STATUS=approved` cannot bypass immutable evidence gates. The model
 may be used only for authenticated, non-persisting schema-specific shadow evaluation until better
 merchant labels/features, fairness, drift, rollback and named-owner sign-off are available.

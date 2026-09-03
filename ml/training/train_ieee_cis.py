@@ -536,6 +536,11 @@ def main() -> None:
         "schema_version": 1,
         "created_at": datetime.now(UTC).isoformat(),
         "dataset": "IEEE-CIS Fraud Detection train_transaction + train_identity",
+        "data_usage": {
+            "commercial_production_authorized": False,
+            "allowed_purposes": ["competition", "academic research", "education"],
+            "source_rules": "https://www.kaggle.com/competitions/ieee-fraud-detection/rules",
+        },
         "training_rows": len(y_train),
         "calibration_rows": len(y_cal),
         "selection_rows": len(y_select),
