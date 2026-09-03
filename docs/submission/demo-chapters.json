@@ -1,0 +1,62 @@
+[
+  {
+    "title": "00:00 | RazorShield AI - the problem",
+    "seconds": 30,
+    "image": "dashboard.png",
+    "narration": "RazorShield AI is a defense-only merchant fraud-risk prototype. A risk score alone is not enough. A reviewer needs to know who sent money, who received it, what evidence supports an alert, and what is still unknown. This walkthrough uses actual screenshots from an automated local rehearsal, with synthetic data and a synthetic narrator. It is not a continuous live recording or a production claim."
+  },
+  {
+    "title": "00:30 | One measured review workflow",
+    "seconds": 30,
+    "image": "dashboard.png",
+    "narration": "The dashboard is the entry point to transactions, investigations and review. Underneath it, FastAPI combines a trained fraud classifier, anomaly detection, behavior, velocity, graph evidence and configurable rules. A learned fusion model supports the risk decision. The default investigation is bounded local orchestration with lexical policy retrieval. We do not describe that as a deployed large language model service. Human control remains the decision boundary."
+  },
+  {
+    "title": "01:00 | Normal transaction - LOW, 6 / 100",
+    "seconds": 30,
+    "image": "low-risk.png",
+    "narration": "The rehearsal submits a normal payment of two thousand rupees through the authenticated risk API. Its context includes a familiar, verified utility recipient and low velocity. The stored assessment is low risk, six out of one hundred. Missing verification remains visible. The score is a risk index, not a calibrated confidence that a person is legitimate. This fixture demonstrates expected behavior; it is not a statistical accuracy study."
+  },
+  {
+    "title": "01:30 | Suspicious transaction - HIGH, 100 / 100",
+    "seconds": 30,
+    "image": "high-risk.png",
+    "narration": "Next, the rehearsal submits one hundred and twenty thousand rupees with a five thousand rupee baseline, a new device, new location, an unfamiliar recipient, failed attempts and eight transactions in five minutes. The actual result is high risk, one hundred out of one hundred, with manual review recommended. This is intentionally a strong synthetic scenario. It does not establish guilt, and the system does not block or transfer money."
+  },
+  {
+    "title": "02:00 | Evidence includes both parties",
+    "seconds": 30,
+    "image": "sender-receiver.png",
+    "narration": "The reviewer can inspect both ends of the transaction. The evidence contains the synthetic customer's name and account reference, the recipient account, bank references, payment amount, device and location. A separate round-trip test verifies all supplied party fields across twenty-four fabricated records. Source data is distinct from verified identity. Information that was not supplied remains missing rather than being invented by the investigator."
+  },
+  {
+    "title": "02:30 | Bounded investigation, explicit uncertainty",
+    "seconds": 45,
+    "image": "investigation.png",
+    "narration": "Opening the high-risk evidence starts a bounded investigation. It retrieves permitted transaction evidence, prior history, observed relationships and applicable policy. The report separates its recommendation from missing information, and states that no financial action was executed. Contextual contribution bars are structured explanations, not SHAP. The optional IEEE candidate has a separate tested permutation SHAP implementation, but it is not the ordinary merchant scoring model. Anomaly is also not proof of fraud: an unusual transaction can be legitimate. These distinctions keep the demonstration honest about what the system actually knows."
+  },
+  {
+    "title": "03:15 | Reviewer decision and accountability",
+    "seconds": 15,
+    "image": "human-decision.png",
+    "narration": "The reviewer adds a note and escalates for verification. The audit records that human decision. No money action occurs. Monitoring is shown under the analyst role, respecting reviewer permissions."
+  },
+  {
+    "title": "03:30 | Real held-out metrics, separate populations",
+    "seconds": 45,
+    "image": "monitoring.png",
+    "narration": "The bundled synthetic fusion model has thirty-six point two three percent precision and fifty-two point two two percent recall on twelve thousand held-out rows. Separately, the real IEEE candidate's F1 profile has fifty point three eight percent precision, fifty-two point two two percent recall, and fifty-three point six two percent precision-recall area on eighty-eight thousand five hundred eighty-one held-out rows. Its false-positive rate is one point eight six percent. Frozen-artifact replay reproduced the reports. Neither model meets our production targets. Lower modeled cost also increases review workload; these cost simulations are not realized savings."
+  },
+  {
+    "title": "04:15 | Validation before infrastructure",
+    "seconds": 25,
+    "image": "audit.png",
+    "narration": "Seventy backend and machine-learning tests pass locally, including PostgreSQL migrations, golden transactions and security boundaries. Two Chromium tests verify the browser journey. Lint, type checking and the frontend build pass. This does not certify production deployment. The repository still needs approved publication and successful remote CI. The focus is reproducible evidence."
+  },
+  {
+    "title": "04:40 | What broke, and what we learned",
+    "seconds": 20,
+    "image": "audit.png",
+    "narration": "PostgreSQL failed because the auth migration created its role enum twice, explicitly and through a table hook. We fixed enum ownership and tested fresh, existing and downgrade paths. The goal is measurable, explainable risk decisions, with humans in control."
+  }
+]

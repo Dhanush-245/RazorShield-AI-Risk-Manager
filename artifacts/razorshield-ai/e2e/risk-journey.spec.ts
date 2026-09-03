@@ -19,6 +19,12 @@ test("merchant can traverse dashboard, transaction, investigation, audit and mon
   await expect(page.getByText("Risk overview", { exact: true })).toBeVisible();
   await expect(page.getByTestId("status-query-error")).toHaveCount(0);
 
+  // Simulate an expired/corrupt short-lived access token. The HttpOnly refresh
+  // cookie must rotate the session without exposing the refresh secret to JS.
+  await page.evaluate(() =>
+    sessionStorage.setItem("razorshield_access_token", "expired-access-token"),
+  );
+
   await page.getByTestId("link-nav-transactions").click();
   await expect(page).toHaveURL(/\/transactions$/);
   await expect(

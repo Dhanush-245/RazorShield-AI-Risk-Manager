@@ -141,6 +141,23 @@ def investigate_with_bounded_agent(
     )
     transaction = assessment.transaction
     model_features = json.loads(assessment.feature_snapshot or "{}")
+    submitted_shared_accounts = model_features.get("shared_device_accounts")
+    provenance_event = db.scalar(
+        select(AuditEvent)
+        .where(
+            AuditEvent.merchant_id == current.merchant_id,
+            AuditEvent.entity_id == assessment.id,
+            AuditEvent.event_type == "DECISION_SNAPSHOT_RECORDED",
+        )
+        .order_by(desc(AuditEvent.created_at))
+    )
+    if provenance_event:
+        try:
+            submitted_shared_accounts = json.loads(provenance_event.detail)["body"]["featureProvenance"][
+                "shared_device_accounts"
+            ]["submitted"]
+        except (KeyError, TypeError, ValueError):
+            pass
     flow_fact = (
         f"Stored transaction record links customer {transaction.customer_id} to recipient "
         f"{transaction.recipient_id} for {transaction.currency} {float(transaction.amount):,.2f}."
@@ -307,7 +324,8 @@ def investigate_with_bounded_agent(
         },
         "network": {
             "deviceId": transaction.device_id,
-            "submittedSharedAccounts": model_features.get("shared_device_accounts"),
+            "submittedSharedAccounts": submitted_shared_accounts,
+            "effectiveSharedAccounts": model_features.get("shared_device_accounts"),
             "observedRelatedCustomerAccounts": len(related_customers),
         },
         "policies": [

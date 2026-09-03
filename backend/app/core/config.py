@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     jwt_secret: str = "development-only-change-me-32-bytes"
     access_token_minutes: int = 15
+    refresh_token_days: int = 7
+    label_maturity_days: int = Field(default=45, ge=30, le=180)
     reset_token_minutes: int = 10
     otp_minutes: int = 5
     otp_max_attempts: int = 5

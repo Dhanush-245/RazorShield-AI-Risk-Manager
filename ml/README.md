@@ -85,7 +85,9 @@ The command writes `ml/reports/ieee_cis/data_audit.json` and `data_audit.md` wit
 counts, target balance, missingness, duplicate IDs, identity join coverage, timestamp bounds, and
 leakage controls. It fails closed if either official file or any essential column is absent.
 
-Training remains blocked until this report has been reviewed. The next implementation gate is
-prior-only IEEE-CIS feature engineering followed by a 70/15/15 past-to-future split, Logistic
-Regression, Random Forest, XGBoost, probability calibration, validation-only threshold and business
-cost optimization, and one locked final-test report.
+The local audit and v2 training have completed. Five candidate algorithms were
+compared using a 70/7.5/7.5/15 train/calibration/selection/test split, selecting
+XGBoost. The frozen 88,581-row test report reproduced on 2026-08-31. It remains
+candidate-only and fails the requested production acceptance targets. Audit new
+source inputs before any new training. See [the current real-data workflow](../docs/REAL_ML_PIPELINE.md)
+and [metrics, costs and limitations](../docs/EVALUATION.md).

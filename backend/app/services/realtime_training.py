@@ -31,6 +31,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models.audit import AuditEvent
 from app.models.risk import RiskAssessment, Transaction
+from app.services.label_maturity import is_mature_label
 from app.services.model_risk import TRAINING_FEATURE_NAMES, load_models
 
 MINIMUM_TRAINING_ROWS = 100
@@ -185,12 +186,28 @@ def _validated_training_rows(
         .order_by(Transaction.occurred_at)
     ).all()
     labeled: list[tuple[list[float], int, int]] = []
+    immature = 0
+    maturity_days = get_settings().label_maturity_days
     for assessment, transaction in rows:
         if (
             transaction.fraud_label is None
             or transaction.return_label is None
             or not assessment.feature_snapshot
         ):
+            continue
+        if not (
+            is_mature_label(
+                transaction.occurred_at,
+                transaction.fraud_label_observed_at,
+                maturity_days=maturity_days,
+            )
+            and is_mature_label(
+                transaction.occurred_at,
+                transaction.return_label_observed_at,
+                maturity_days=maturity_days,
+            )
+        ):
+            immature += 1
             continue
         snapshot = json.loads(assessment.feature_snapshot)
         if not all(name in snapshot for name in TRAINING_FEATURE_NAMES):
@@ -207,7 +224,8 @@ def _validated_training_rows(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 f"Training requires at least {MINIMUM_TRAINING_ROWS} rows with both fraud_label "
-                f"and return_label. Found {len(labeled)} fully labeled rows."
+                f"and return_label observed at least {maturity_days} days after the event. "
+                f"Found {len(labeled)} mature rows; withheld {immature} immature rows."
             ),
         )
     values = np.asarray([item[0] for item in labeled], dtype=float)
@@ -332,6 +350,8 @@ def train_active_dataset_once(db: Session, merchant_id: str, dataset_id: str) ->
             "leakage_policy": (
                 "Thresholds use validation only; the latest 20% remains locked for final reporting."
             ),
+            "label_maturity_days": get_settings().label_maturity_days,
+            "label_policy": "Only outcomes observed after the full maturity window are eligible.",
         },
         "features": list(TRAINING_FEATURE_NAMES),
         "feature_bounds": feature_bounds,

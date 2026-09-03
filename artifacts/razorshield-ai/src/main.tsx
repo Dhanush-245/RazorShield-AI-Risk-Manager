@@ -7,12 +7,12 @@ import {
 
 import App from "./App";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { expireSession } from "@/lib/session";
+import { expireSession, getValidAccessToken } from "@/lib/session";
 
 import "./index.css";
 
 setBaseUrl(import.meta.env.VITE_API_BASE_URL ?? null);
-setAuthTokenGetter(() => sessionStorage.getItem("razorshield_access_token"));
+setAuthTokenGetter(getValidAccessToken);
 setUnauthorizedHandler(expireSession);
 
 createRoot(document.getElementById("root")!, {

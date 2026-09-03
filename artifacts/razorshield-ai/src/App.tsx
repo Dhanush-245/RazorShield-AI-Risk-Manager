@@ -71,6 +71,11 @@ import {
 } from "wouter";
 import { ErrorBoundary } from "@/components/error-boundary";
 import {
+  DecisionWorkbench,
+  OperationsConsole,
+  RiskSimulator,
+} from "@/components/risk-workbench";
+import {
   Command as CommandMenu,
   CommandEmpty,
   CommandGroup,
@@ -89,8 +94,11 @@ import NotFound from "@/pages/not-found";
 import {
   clearSessionNotice,
   expireSession,
+  getValidAccessToken,
   getSessionNotice,
+  refreshSession,
   SESSION_EXPIRED_EVENT,
+  signOutSession,
 } from "@/lib/session";
 import {
   AuthScreen,
@@ -203,6 +211,18 @@ const navItems: Array<{
     label: "Assess transaction",
     icon: Activity,
     roles: analystRoles,
+  },
+  {
+    href: "/simulator",
+    label: "Risk simulator",
+    icon: Gauge,
+    roles: investigationRoles,
+  },
+  {
+    href: "/operations",
+    label: "Risk operations",
+    icon: Target,
+    roles: analyticsRoles,
   },
   {
     href: "/investigations",
@@ -579,9 +599,7 @@ function Header({
             aria-label="Sign out"
             title="Sign out"
             onClick={() => {
-              sessionStorage.removeItem("razorshield_access_token");
-              sessionStorage.removeItem("razorshield_user");
-              window.location.reload();
+              void signOutSession().finally(() => window.location.reload());
             }}
             className="flex h-11 w-11 items-center justify-center text-[var(--muted-ink)] hover:text-[var(--rust)]"
           >
@@ -2947,6 +2965,17 @@ function InvestigationDetail({ transactionId }: { transactionId?: string }) {
           </p>
         </div>
       </div>
+      {transactionId && (
+        <DecisionWorkbench
+          transactionId={transactionId}
+          request={authenticatedRequest}
+          mayReview={mayReview}
+          onChanged={() => {
+            void queryClient.invalidateQueries();
+            announceLiveDataRefresh();
+          }}
+        />
+      )}
       {feedback && (
         <div className="space-y-2">
           <div
@@ -5366,18 +5395,30 @@ async function authenticatedRequest<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(apiUrl(path), {
+  const token = await getValidAccessToken();
+  let response = await fetch(apiUrl(path), {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${sessionStorage.getItem("razorshield_access_token")}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init?.headers,
     },
   });
-  const body = await response.json();
   if (response.status === 401) {
-    expireSession();
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      response = await fetch(apiUrl(path), {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${refreshed}`,
+          ...init?.headers,
+        },
+      });
+    }
   }
+  const body = await response.json();
+  if (response.status === 401) expireSession();
   if (!response.ok) {
     const validation = Array.isArray(body.detail)
       ? body.detail
@@ -6910,15 +6951,21 @@ type ReviewCase = {
   reason: string;
   status: string;
   assignedReviewer?: string;
+  assignedToMe: boolean;
   caseType: string;
   recommendation: string;
   humanDecision?: string;
   createdAt: string;
+  ageHours: number;
+  slaStatus: string;
 };
 function ReviewQueuePage() {
   const [, setLocation] = useLocation();
   const query = useApiData<ReviewCase[]>("/reviews");
+  const user = getStoredUser();
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [claiming, setClaiming] = useState<string | null>(null);
+  const [claimError, setClaimError] = useState("");
   const cases = useMemo(
     () =>
       (query.data ?? []).filter(
@@ -6956,6 +7003,11 @@ function ReviewQueuePage() {
           )}
         </div>
       </div>
+      {claimError && (
+        <p role="alert" className="mb-4 text-sm text-[var(--rust)]">
+          {claimError}
+        </p>
+      )}
       {query.error ? (
         <QueryState error onRetry={query.reload} label={query.error} />
       ) : query.loading ? (
@@ -6973,7 +7025,7 @@ function ReviewQueuePage() {
                   "Amount",
                   "Status",
                   "Reviewer",
-                  "Created",
+                  "Age / SLA",
                   "",
                 ].map((label) => (
                   <th key={label} className="px-4 py-3">
@@ -7015,17 +7067,52 @@ function ReviewQueuePage() {
                     {item.assignedReviewer ?? "Unassigned"}
                   </td>
                   <td className="px-4 py-4 text-[var(--muted-ink)]">
-                    {formatTime(item.createdAt)}
+                    <span className="block">{item.ageHours.toFixed(1)}h</span>
+                    <span
+                      className={cn(
+                        "text-[10px] font-bold uppercase",
+                        item.slaStatus === "BREACHED" && "text-[var(--rust)]",
+                      )}
+                    >
+                      {item.slaStatus.replaceAll("_", " ")}
+                    </span>
                   </td>
                   <td className="px-4 py-4">
-                    <button
-                      onClick={() =>
-                        setLocation(`/investigations/${item.transactionId}`)
-                      }
-                      className="bench-button"
-                    >
-                      Open <ChevronRight className="h-3 w-3" />
-                    </button>
+                    <div className="flex gap-2">
+                      {!item.assignedReviewer &&
+                        user &&
+                        reviewerRoles.includes(user.role) && (
+                          <button
+                            disabled={claiming === item.caseId}
+                            onClick={async () => {
+                              setClaiming(item.caseId);
+                              setClaimError("");
+                              try {
+                                await authenticatedRequest(
+                                  `/reviews/${encodeURIComponent(item.caseId)}/claim`,
+                                  { method: "POST" },
+                                );
+                                query.reload();
+                              } catch (error) {
+                                setClaimError(String((error as Error).message));
+                              } finally {
+                                setClaiming(null);
+                              }
+                            }}
+                            className="bench-button"
+                          >
+                            {claiming === item.caseId ? "Claiming…" : "Claim"}
+                          </button>
+                        )}
+                      <button
+                        onClick={() =>
+                          setLocation(`/investigations/${item.transactionId}`)
+                        }
+                        className="bench-button"
+                      >
+                        Open <ChevronRight className="h-3 w-3" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -7044,6 +7131,7 @@ function ReviewQueuePage() {
 }
 
 type FraudIntelligence = {
+  status: "SPIKE_DETECTED" | "NOMINAL" | "INSUFFICIENT_DATA";
   currentRate: number;
   baselineRate: number;
   score: number;
@@ -7055,6 +7143,9 @@ type FraudIntelligence = {
     paymentMethods: Array<[string, number]>;
   };
   sampleSize: number;
+  currentSamples: number;
+  baselineSamples: number;
+  minimumSamples: { current: number; baseline: number };
   trend: Array<{ timestamp: string; riskScore: number; highRisk: boolean }>;
   unavailableContributors: string[];
   limitation: string;
@@ -7094,7 +7185,11 @@ function FraudIntelligencePage() {
             <div className="mt-6 flex flex-wrap items-end justify-between gap-5">
               <div>
                 <h3 className="font-display text-4xl uppercase">
-                  {data.flag ? "Spike detected" : "No spike detected"}
+                  {data.status === "INSUFFICIENT_DATA"
+                    ? "Insufficient data"
+                    : data.flag
+                      ? "Spike detected"
+                      : "No spike detected"}
                 </h3>
                 <p className="mt-2 text-xs opacity-70">{data.window}</p>
               </div>
@@ -7108,7 +7203,7 @@ function FraudIntelligencePage() {
                   {(data.currentRate * 100).toFixed(1)}%
                 </p>
                 <p className="mt-1 text-xs opacity-65">
-                  Current high-risk rate
+                  Current high-risk rate · {data.currentSamples} events
                 </p>
               </div>
               <div>
@@ -7116,7 +7211,7 @@ function FraudIntelligencePage() {
                   {(data.baselineRate * 100).toFixed(1)}%
                 </p>
                 <p className="mt-1 text-xs opacity-65">
-                  Baseline high-risk rate
+                  Baseline high-risk rate · {data.baselineSamples} events
                 </p>
               </div>
             </div>
@@ -7345,7 +7440,7 @@ type Customer360 = {
   riskScore: number;
   transactions: number;
   returns: number;
-  chargebacks: number;
+  chargebackCandidates: number;
   devices: string[];
   locations: string[];
   fraudFlags: number;
@@ -7412,9 +7507,9 @@ function Customer360Page() {
               tone="gold"
             />
             <MetricCard
-              label="Chargebacks"
-              value={String(data.chargebacks)}
-              subtext="Demo candidates"
+              label="Chargeback candidates"
+              value={String(data.chargebackCandidates)}
+              subtext="Score-based, not observed disputes"
               icon={ShieldAlert}
             />
             <MetricCard
@@ -7825,7 +7920,10 @@ type MonitoringPayload = {
     status: string;
     sampleSize: number;
     minimumRequired: number;
+    referenceSamples: number;
+    recentSamples: number;
     features: Record<string, string>;
+    method: string;
   };
   disclaimer: string;
 };
@@ -7945,8 +8043,8 @@ function MonitoringPage() {
             </div>
             <p className="mt-3 text-[10px] text-[var(--muted-ink)]">
               Live sample {data.drift.sampleSize} / minimum{" "}
-              {data.drift.minimumRequired}; drift alerts remain disabled until
-              sufficient data exists.
+              {data.drift.minimumRequired}; reference {data.drift.referenceSamples}
+              {" / "}recent {data.drift.recentSamples}. {data.drift.method}
             </p>
           </section>
         </>
@@ -8012,6 +8110,27 @@ function Router({ user }: { user: AuthUser }) {
         <Route path="/assess">
           <RoleGate user={user} roles={analystRoles}>
             <AssessmentPage />
+          </RoleGate>
+        </Route>
+        <Route path="/simulator">
+          <RoleGate user={user} roles={investigationRoles}>
+            <Shell title="Risk simulator" eyebrow="Hypothetical experiments">
+              <RiskSimulator request={authenticatedRequest} />
+            </Shell>
+          </RoleGate>
+        </Route>
+        <Route path="/operations">
+          <RoleGate user={user} roles={analyticsRoles}>
+            <Shell
+              title="Risk operations"
+              eyebrow="Merchant risk command center"
+            >
+              <OperationsConsole
+                request={authenticatedRequest}
+                isAdmin={user.role === "ADMIN"}
+                mayInvestigate={investigationRoles.includes(user.role)}
+              />
+            </Shell>
           </RoleGate>
         </Route>
         <Route path="/investigations">

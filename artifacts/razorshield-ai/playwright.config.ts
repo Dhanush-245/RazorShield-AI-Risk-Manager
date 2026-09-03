@@ -1,4 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+const uiPort = Number(process.env.RAZORSHIELD_E2E_UI_PORT ?? 5173);
+const apiPort = Number(process.env.RAZORSHIELD_E2E_API_PORT ?? 5001);
+for (const port of [uiPort, apiPort]) {
+  if (!Number.isInteger(port) || port < 1024 || port > 65535)
+    throw new Error("Invalid E2E port");
+}
+const database = path.join(tmpdir(), `razorshield-e2e-${randomUUID()}.db`);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -8,7 +19,11 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: `http://127.0.0.1:${uiPort}`,
+    video:
+      process.env.RAZORSHIELD_E2E_RECORD === "1"
+        ? { mode: "on", size: { width: 1440, height: 1000 } }
+        : "off",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -22,17 +37,17 @@ export default defineConfig({
     {
       command:
         "RAZORSHIELD_ENVIRONMENT=development " +
-        "RAZORSHIELD_DATABASE_URL=sqlite:////tmp/razorshield-browser-e2e.db " +
+        `RAZORSHIELD_DATABASE_URL='sqlite:///${database}' ` +
         "RAZORSHIELD_AUTO_SEED_DEMO=true " +
-        "../../backend/.venv/bin/python -m uvicorn app.main:app --app-dir ../../backend --host 127.0.0.1 --port 5001",
-      url: "http://127.0.0.1:5001/api/v1/health",
-      reuseExistingServer: !process.env.CI,
+        `../../backend/.venv/bin/python -m uvicorn app.main:app --app-dir ../../backend --host 127.0.0.1 --port ${apiPort}`,
+      url: `http://127.0.0.1:${apiPort}/api/v1/health`,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
     {
-      command: "VITE_DEV_API_TARGET=http://127.0.0.1:5001 pnpm dev",
-      url: "http://127.0.0.1:5173",
-      reuseExistingServer: !process.env.CI,
+      command: `PORT=${uiPort} VITE_DEV_API_TARGET=http://127.0.0.1:${apiPort} pnpm dev`,
+      url: `http://127.0.0.1:${uiPort}`,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
   ],

@@ -1,7 +1,7 @@
 import json
 import uuid
 from collections import Counter
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from time import perf_counter
 from typing import Annotated
 
@@ -29,7 +29,9 @@ from app.schemas.risk import (
 )
 from app.services.dataset_adapter import adapt_dataset_rows
 from app.services.dataset_scope import get_active_dataset
+from app.services.feature_provenance import resolve_risk_context
 from app.services.ieee_cis_risk import predict_ieee_transaction
+from app.services.label_maturity import observed_at
 from app.services.model_governance import ieee_cis_promotion_evidence
 from app.services.model_risk import (
     TRAINING_FEATURE_NAMES,
@@ -38,6 +40,7 @@ from app.services.model_risk import (
     feature_vector,
 )
 from app.services.realtime_training import train_active_dataset_once
+from app.services.risk_workbench import decision_snapshot
 
 router = APIRouter(prefix="/risk", tags=["risk"])
 
@@ -151,121 +154,6 @@ def behavior_context(
     }
 
 
-def enrich_transaction_context(
-    payload: RiskAssessmentRequest,
-    db: Session,
-    merchant_id: str,
-    dataset_id: str | None,
-) -> RiskAssessmentRequest:
-    # SQLite returns DateTime values without timezone information even when the
-    # SQLAlchemy column is declared timezone-aware. Normalize the incoming UTC
-    # timestamp for database comparisons so persisted history can be enriched
-    # consistently in both SQLite development and production databases.
-    def comparable_timestamp(value: datetime) -> datetime:
-        if value.tzinfo is None:
-            return value
-        return value.astimezone(UTC).replace(tzinfo=None)
-
-    comparison_timestamp = comparable_timestamp(payload.timestamp)
-    dataset_condition = (
-        Transaction.dataset_id == dataset_id if dataset_id is not None else Transaction.dataset_id.is_(None)
-    )
-    customer_history = (
-        db.query(Transaction)
-        .filter(
-            Transaction.merchant_id == merchant_id,
-            Transaction.customer_id == payload.customer_id,
-            Transaction.occurred_at < comparison_timestamp,
-            dataset_condition,
-        )
-        .order_by(Transaction.occurred_at.desc())
-        .limit(500)
-        .all()
-    )
-    update: dict[str, object] = {}
-    if customer_history and payload.customer_average_amount is None:
-        update["customer_average_amount"] = sum(item.amount for item in customer_history) / len(
-            customer_history
-        )
-    if customer_history and payload.account_age_days == 0:
-        earliest = min(comparable_timestamp(item.occurred_at) for item in customer_history)
-        update["account_age_days"] = max(0, (comparison_timestamp - earliest).days)
-    update["transactions_last_15_minutes"] = max(
-        payload.transactions_last_15_minutes,
-        sum(
-            comparable_timestamp(item.occurred_at) >= comparison_timestamp - timedelta(minutes=15)
-            for item in customer_history
-        ),
-    )
-    update["transactions_last_hour"] = max(
-        payload.transactions_last_hour,
-        sum(
-            comparable_timestamp(item.occurred_at) >= comparison_timestamp - timedelta(hours=1)
-            for item in customer_history
-        ),
-    )
-    if payload.recipient_id:
-        recipient_history = (
-            db.query(Transaction)
-            .filter(
-                Transaction.merchant_id == merchant_id,
-                Transaction.recipient_id == payload.recipient_id,
-                Transaction.occurred_at < comparison_timestamp,
-                dataset_condition,
-            )
-            .order_by(Transaction.occurred_at.desc())
-            .limit(5_000)
-            .all()
-        )
-        customer_recipient_history = [
-            item for item in recipient_history if item.customer_id == payload.customer_id
-        ]
-        recent_recipient = [
-            item
-            for item in customer_recipient_history
-            if comparable_timestamp(item.occurred_at) >= comparison_timestamp - timedelta(minutes=15)
-        ]
-        recipient_hour = [
-            item
-            for item in customer_recipient_history
-            if comparable_timestamp(item.occurred_at) >= comparison_timestamp - timedelta(hours=1)
-        ]
-        update.update(
-            {
-                "recipient_used_before": bool(customer_recipient_history) or payload.recipient_used_before,
-                "customer_recipient_transactions": max(
-                    payload.customer_recipient_transactions, len(customer_recipient_history)
-                ),
-                "recipient_transaction_count": max(
-                    payload.recipient_transaction_count, len(recipient_history)
-                ),
-                "transactions_to_same_recipient_last_15_minutes": max(
-                    payload.transactions_to_same_recipient_last_15_minutes, len(recent_recipient)
-                ),
-                "amount_to_same_recipient_last_hour": max(
-                    payload.amount_to_same_recipient_last_hour,
-                    sum((item.amount for item in recipient_hour), start=payload.amount),
-                ),
-                "unique_customers_to_recipient": max(
-                    payload.unique_customers_to_recipient,
-                    len({item.customer_id for item in recipient_history}),
-                ),
-                "unique_devices_to_recipient": max(
-                    payload.unique_devices_to_recipient,
-                    len({item.device_id for item in recipient_history if item.device_id}),
-                ),
-            }
-        )
-        prior_scores = [
-            float(assessment.score) / 100
-            for item in recipient_history
-            for assessment in item.assessments[-1:]
-        ]
-        if prior_scores and payload.recipient_risk_score == 0.5:
-            update["recipient_risk_score"] = sum(prior_scores) / len(prior_scores)
-    return payload.model_copy(update=update)
-
-
 def persist_assessment(
     payload: RiskAssessmentRequest,
     request: Request,
@@ -289,7 +177,9 @@ def persist_assessment(
     )
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Transaction ID already exists")
-    payload = enrich_transaction_context(payload, db, current.merchant_id, dataset_id)
+    submitted_payload = payload
+    resolved = resolve_risk_context(payload, db, current.merchant_id, dataset_id)
+    payload = resolved.payload
     started = perf_counter()
     configuration = get_rule_configuration(db, current.merchant_id)
     result = assess_with_models(payload, rule_thresholds(configuration))
@@ -304,33 +194,42 @@ def persist_assessment(
         merchant_id=payload.merchant_id,
         dataset_id=dataset_id,
         customer_id=payload.customer_id,
-        customer_name=payload.customer_name,
-        customer_email=payload.customer_email,
-        customer_phone=payload.customer_phone,
-        customer_verification_status=payload.customer_verification_status,
-        sender_account_reference=payload.sender_account_reference,
-        sender_bank_name=payload.sender_bank_name,
-        sender_bank_ifsc=payload.sender_bank_ifsc,
+        customer_name=submitted_payload.customer_name,
+        customer_email=submitted_payload.customer_email,
+        customer_phone=submitted_payload.customer_phone,
+        customer_verification_status=submitted_payload.customer_verification_status,
+        sender_account_reference=submitted_payload.sender_account_reference,
+        sender_bank_name=submitted_payload.sender_bank_name,
+        sender_bank_ifsc=submitted_payload.sender_bank_ifsc,
         amount=payload.amount,
         currency=payload.currency,
         device_id=payload.device_id,
         location=payload.location,
         payment_method=payload.payment_method,
-        customer_age=payload.customer_age,
+        customer_age=submitted_payload.customer_age,
         account_age_days=payload.account_age_days,
         recipient_id=payload.recipient_id,
-        recipient_name=payload.recipient_name,
-        recipient_account_reference=payload.recipient_account_reference,
-        recipient_bank_name=payload.recipient_bank_name,
-        recipient_bank_ifsc=payload.recipient_bank_ifsc,
-        recipient_email=payload.recipient_email,
-        recipient_phone=payload.recipient_phone,
-        recipient_type=payload.recipient_type,
-        recipient_category=payload.recipient_category,
-        recipient_verified=payload.recipient_verified,
-        transaction_intent=payload.transaction_intent,
-        fraud_label=payload.fraud_label,
-        return_label=payload.return_label,
+        recipient_name=submitted_payload.recipient_name,
+        recipient_account_reference=submitted_payload.recipient_account_reference,
+        recipient_bank_name=submitted_payload.recipient_bank_name,
+        recipient_bank_ifsc=submitted_payload.recipient_bank_ifsc,
+        recipient_email=submitted_payload.recipient_email,
+        recipient_phone=submitted_payload.recipient_phone,
+        recipient_type=submitted_payload.recipient_type,
+        recipient_category=submitted_payload.recipient_category,
+        recipient_verified=submitted_payload.recipient_verified,
+        transaction_intent=submitted_payload.transaction_intent,
+        fraud_label=submitted_payload.fraud_label,
+        return_label=submitted_payload.return_label,
+        fraud_label_observed_at=observed_at(
+            submitted_payload.fraud_label, submitted_payload.fraud_label_observed_at
+        ),
+        return_label_observed_at=observed_at(
+            submitted_payload.return_label, submitted_payload.return_label_observed_at
+        ),
+        label_provenance=("T2_MERCHANT_ASSERTED_DATASET" if dataset_id else "T2_MERCHANT_ASSERTED_API")
+        if submitted_payload.fraud_label is not None or submitted_payload.return_label is not None
+        else None,
         occurred_at=payload.timestamp,
     )
     assessment = RiskAssessment(
@@ -356,6 +255,24 @@ def persist_assessment(
     )
     db.add(assessment)
     db.flush()
+    db.add(
+        AuditEvent(
+            merchant_id=payload.merchant_id,
+            dataset_id=dataset_id,
+            entity_type="risk_assessment",
+            entity_id=assessment.id,
+            event_type="DECISION_SNAPSHOT_RECORDED",
+            actor_type="SYSTEM",
+            detail=decision_snapshot(
+                payload,
+                rule_thresholds(configuration),
+                result,
+                feature_provenance=resolved.provenance,
+                graph_context=resolved.graph,
+            ),
+            request_id=getattr(request.state, "request_id", None),
+        )
+    )
     case_reference: str | None = None
     if result.score >= 31:
         case_reference = (
@@ -485,6 +402,19 @@ def persist_assessment(
             "unique_customers_to_recipient": payload.unique_customers_to_recipient,
             "unique_devices_to_recipient": payload.unique_devices_to_recipient,
             "transaction_intent": payload.transaction_intent,
+        },
+        feature_provenance=resolved.provenance,
+        graph_context=resolved.graph,
+        uncertainty={
+            "status": (
+                "LIMITED_HISTORY"
+                if sum(not item["available"] for item in resolved.provenance.values()) >= 4
+                else "STANDARD"
+            ),
+            "unavailableDerivedFeatures": [
+                name for name, item in resolved.provenance.items() if not item["available"]
+            ],
+            "meaning": "Data sufficiency indicator, not a calibrated confidence interval.",
         },
         behavior_context=customer_behavior,
         rule_results=[

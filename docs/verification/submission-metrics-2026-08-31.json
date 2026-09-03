@@ -1,0 +1,344 @@
+{
+  "checked_at": "2026-08-31T09:41:57.212820+00:00",
+  "synthetic": {
+    "status": "PASS",
+    "provenance": "SYNTHETIC",
+    "dataset": {
+      "provenance": "SYNTHETIC",
+      "generator_seed": 245,
+      "rows": 60000,
+      "train_rows": 36000,
+      "validation_rows": 12000,
+      "held_out_rows": 12000,
+      "split": "temporal_60_20_20",
+      "fusion_training": "five_fold_expanding_window_temporal_stacking",
+      "fusion_training_rows": 30000,
+      "leakage_policy": "Every stacking prediction is produced by models fitted only on earlier rows.",
+      "dataset_roles": {
+        "supervised_fraud": "Synthetic labelled transaction rows; demo validation only",
+        "anomaly": "Legitimate rows from the chronological training window only",
+        "behavioral_history": "Prior-only customer and recipient aggregates",
+        "relationship_graph": "Customer-device-location-recipient relationship features",
+        "application_testing": "Synthetic RazorShield records; not production training evidence"
+      }
+    },
+    "metrics": {
+      "fraud": {
+        "precision": 0.4414,
+        "recall": 0.4275,
+        "f1": 0.4343,
+        "pr_auc": 0.4196,
+        "roc_auc": 0.8222,
+        "brier_score": 0.0708,
+        "false_positive_rate": 0.0586,
+        "false_negative_rate": 0.5725,
+        "confusion_matrix": [
+          [
+            10194,
+            634
+          ],
+          [
+            671,
+            501
+          ]
+        ]
+      },
+      "anomaly": {
+        "precision": 0.3183,
+        "recall": 0.2108,
+        "f1": 0.2536,
+        "pr_auc": 0.261,
+        "roc_auc": 0.7383,
+        "brier_score": 0.1685,
+        "false_positive_rate": 0.0489,
+        "false_negative_rate": 0.7892,
+        "confusion_matrix": [
+          [
+            10299,
+            529
+          ],
+          [
+            925,
+            247
+          ]
+        ]
+      },
+      "fusion": {
+        "precision": 0.3623,
+        "recall": 0.5222,
+        "f1": 0.4278,
+        "pr_auc": 0.4118,
+        "roc_auc": 0.8135,
+        "brier_score": 0.0719,
+        "false_positive_rate": 0.0995,
+        "false_negative_rate": 0.4778,
+        "confusion_matrix": [
+          [
+            9751,
+            1077
+          ],
+          [
+            560,
+            612
+          ]
+        ]
+      },
+      "return": {
+        "precision": 0.1545,
+        "recall": 0.4059,
+        "f1": 0.2238,
+        "pr_auc": 0.1572,
+        "roc_auc": 0.6542,
+        "brier_score": 0.0757,
+        "false_positive_rate": 0.2063,
+        "false_negative_rate": 0.5941,
+        "confusion_matrix": [
+          [
+            8715,
+            2265
+          ],
+          [
+            606,
+            414
+          ]
+        ]
+      }
+    },
+    "illustrative_costs_inr": {
+      "false_positive": 100.0,
+      "false_negative": 5000.0,
+      "manual_review": 50.0
+    },
+    "business_cost": {
+      "validation_at_cost_threshold": {
+        "threshold": 0.039832,
+        "true_negative": 3896,
+        "false_positive": 6969,
+        "false_negative": 72,
+        "true_positive": 1063,
+        "manual_reviews": 8032,
+        "total_cost_inr": 1458500.0,
+        "cost_per_transaction_inr": 121.54
+      },
+      "locked_test_at_f1_threshold": {
+        "threshold": 0.149218,
+        "true_negative": 9751,
+        "false_positive": 1077,
+        "false_negative": 560,
+        "true_positive": 612,
+        "manual_reviews": 1689,
+        "total_cost_inr": 2992150.0,
+        "cost_per_transaction_inr": 249.35
+      },
+      "locked_test_at_cost_threshold": {
+        "threshold": 0.039832,
+        "true_negative": 3860,
+        "false_positive": 6968,
+        "false_negative": 68,
+        "true_positive": 1104,
+        "manual_reviews": 8072,
+        "total_cost_inr": 1440400.0,
+        "cost_per_transaction_inr": 120.03
+      },
+      "locked_test_always_allow_baseline": {
+        "threshold": 0.5,
+        "true_negative": 10828,
+        "false_positive": 0,
+        "false_negative": 1172,
+        "true_positive": 0,
+        "manual_reviews": 0,
+        "total_cost_inr": 5860000.0,
+        "cost_per_transaction_inr": 488.33
+      }
+    },
+    "runtime_rounded_high_threshold": 0.1492,
+    "runtime_rounded_threshold_model_metrics": {
+      "precision": 0.3623,
+      "recall": 0.5222,
+      "f1": 0.4278,
+      "pr_auc": 0.4118,
+      "roc_auc": 0.8135,
+      "brier_score": 0.0719,
+      "false_positive_rate": 0.0995,
+      "false_negative_rate": 0.4778,
+      "confusion_matrix": [
+        [
+          9751,
+          1077
+        ],
+        [
+          560,
+          612
+        ]
+      ]
+    },
+    "sha256": {
+      "manifest.json": "1200ce58dc5a1a032d2a556ffa4f516ffe1fdb5905798245a2a9099a692f7de9",
+      "fraud-v3.joblib": "81dc8c57c5615e101647d83f5eb3a31421ba2690ddce10598f2520056740ccc4",
+      "anomaly-v3.joblib": "570148e78064260e933271db3d7cfc95c06a3cd281706857b8d5725965fb95d0",
+      "fusion-v3.joblib": "42a96e4e491c7408409cdf1f7f7602f2bd22721c24a771f1a51ab6d585a21663",
+      "return-v3.joblib": "dea0d5f89d8da8396c92884758b995ee4bbb5ca28469a777f965adb060faf13d"
+    },
+    "limitation": "Frozen estimator evaluation, not full API enrichment/rule-overlay performance; synthetic only."
+  },
+  "ieee": {
+    "status": "PASS",
+    "model": "ieee-cis-xgboost-v2",
+    "split": "chronological 70/7.5/7.5/15 (train/calibration/selection/locked-test)",
+    "locked_test_rows": 88581,
+    "profiles": {
+      "f1": {
+        "rows": 88581,
+        "fraud_rows": 3083,
+        "threshold": 0.211866,
+        "precision": 0.503755,
+        "recall": 0.522219,
+        "f1": 0.512821,
+        "pr_auc": 0.536191,
+        "roc_auc": 0.909001,
+        "brier_score": 0.022377,
+        "false_positive_rate": 0.01855,
+        "false_negative_rate": 0.477781,
+        "alert_rate": 0.03608,
+        "confusion_matrix_tn_fp_fn_tp": [
+          83912,
+          1586,
+          1473,
+          1610
+        ],
+        "business_cost_inr": 7683400
+      },
+      "cost": {
+        "rows": 88581,
+        "fraud_rows": 3083,
+        "threshold": 0.02103,
+        "precision": 0.140428,
+        "recall": 0.849173,
+        "f1": 0.241002,
+        "pr_auc": 0.536191,
+        "roc_auc": 0.909001,
+        "brier_score": 0.022377,
+        "false_positive_rate": 0.187431,
+        "false_negative_rate": 0.150827,
+        "alert_rate": 0.210463,
+        "confusion_matrix_tn_fp_fn_tp": [
+          69473,
+          16025,
+          465,
+          2618
+        ],
+        "business_cost_inr": 4859650
+      },
+      "capacity": {
+        "rows": 88581,
+        "fraud_rows": 3083,
+        "threshold": 0.151543,
+        "precision": 0.429407,
+        "recall": 0.571197,
+        "f1": 0.490256,
+        "pr_auc": 0.536191,
+        "roc_auc": 0.909001,
+        "brier_score": 0.022377,
+        "false_positive_rate": 0.027369,
+        "false_negative_rate": 0.428803,
+        "alert_rate": 0.046297,
+        "confusion_matrix_tn_fp_fn_tp": [
+          83158,
+          2340,
+          1322,
+          1761
+        ],
+        "business_cost_inr": 7049050
+      }
+    },
+    "exported_six_decimal_threshold_profiles": {
+      "f1": {
+        "rows": 88581,
+        "fraud_rows": 3083,
+        "threshold": 0.211866,
+        "precision": 0.503755,
+        "recall": 0.522219,
+        "f1": 0.512821,
+        "pr_auc": 0.536191,
+        "roc_auc": 0.909001,
+        "brier_score": 0.022377,
+        "false_positive_rate": 0.01855,
+        "false_negative_rate": 0.477781,
+        "alert_rate": 0.03608,
+        "confusion_matrix_tn_fp_fn_tp": [
+          83912,
+          1586,
+          1473,
+          1610
+        ]
+      },
+      "cost": {
+        "rows": 88581,
+        "fraud_rows": 3083,
+        "threshold": 0.02103,
+        "precision": 0.140428,
+        "recall": 0.849173,
+        "f1": 0.241002,
+        "pr_auc": 0.536191,
+        "roc_auc": 0.909001,
+        "brier_score": 0.022377,
+        "false_positive_rate": 0.187431,
+        "false_negative_rate": 0.150827,
+        "alert_rate": 0.210463,
+        "confusion_matrix_tn_fp_fn_tp": [
+          69473,
+          16025,
+          465,
+          2618
+        ]
+      },
+      "capacity": {
+        "rows": 88581,
+        "fraud_rows": 3083,
+        "threshold": 0.151543,
+        "precision": 0.429547,
+        "recall": 0.571521,
+        "f1": 0.490466,
+        "pr_auc": 0.536191,
+        "roc_auc": 0.909001,
+        "brier_score": 0.022377,
+        "false_positive_rate": 0.027369,
+        "false_negative_rate": 0.428479,
+        "alert_rate": 0.046308,
+        "confusion_matrix_tn_fp_fn_tp": [
+          83158,
+          2340,
+          1321,
+          1762
+        ]
+      }
+    },
+    "threshold_precision_note": "Historical metrics use full-precision validation thresholds; exported six-decimal thresholds can change boundary decisions. Neither model nor threshold artifacts were modified.",
+    "illustrative_costs_inr": {
+      "false_positive": 100,
+      "false_negative": 5000,
+      "review": 50
+    },
+    "always_allow_cost_inr": 15415000,
+    "sha256": {
+      "train_transaction.csv": "3a5c83ab6b3cc13dcabe5ffa9f522307fd5f7f7b6e6f6a60c32284ca6283d642",
+      "train_identity.csv": "b63c725d8377be90a995268d97f347c17d456b95db45807adcf9f59cd603c37c",
+      "artifact_manifest.json": "075db417ced6b81f3cf4235affaa8a712e9d9b6098c702a7cbf68185ee14b338"
+    },
+    "promotion": "candidate_only_not_connected_to_production_api",
+    "acceptance": {
+      "targets": {
+        "recall": 0.85,
+        "precision": 0.8,
+        "maximum_review_rate": 0.05
+      },
+      "checks": {
+        "recall_at_least_85_percent": false,
+        "precision_at_least_80_percent": false,
+        "review_rate_at_most_5_percent": true
+      },
+      "all_targets_met": false
+    },
+    "limitation": "Previously evaluated locked holdout replay, not a new unseen test or merchant production result. Costs are illustrative, not actual savings."
+  }
+}

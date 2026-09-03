@@ -80,6 +80,7 @@ function endpoint(path: string) {
 async function request<T>(path: string, body: object): Promise<T> {
   const response = await fetch(endpoint(path), {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });

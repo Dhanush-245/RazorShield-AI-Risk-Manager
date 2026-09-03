@@ -91,6 +91,40 @@ def test_login_accepts_email_or_phone_and_rejects_bad_password(client: TestClien
     assert rejected.json()["detail"] == "Invalid credentials"
 
 
+def test_refresh_session_rotates_once_and_logout_revokes(client: TestClient) -> None:
+    authenticated = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "reviewer@example.com", "password": "a-secure-test-password"},
+    )
+    assert authenticated.status_code == 200
+    first_cookie = client.cookies.get("razorshield_refresh")
+    first_access = authenticated.json()["access_token"]
+    assert first_cookie and "HttpOnly" in authenticated.headers["set-cookie"]
+    assert "SameSite=strict" in authenticated.headers["set-cookie"]
+
+    refreshed = client.post("/api/v1/auth/refresh")
+    assert refreshed.status_code == 200, refreshed.text
+    assert refreshed.json()["session_rotated"] is True
+    assert refreshed.json()["access_token"] != first_access
+    second_cookie = client.cookies.get("razorshield_refresh")
+    assert second_cookie and second_cookie != first_cookie
+
+    client.cookies.set("razorshield_refresh", first_cookie, path="/api/v1/auth")
+    assert client.post("/api/v1/auth/refresh").status_code == 401
+    client.cookies.set("razorshield_refresh", second_cookie, path="/api/v1/auth")
+    assert client.post("/api/v1/auth/refresh").status_code == 401
+
+    assert (
+        client.post(
+            "/api/v1/auth/login",
+            json={"identifier": "reviewer@example.com", "password": "a-secure-test-password"},
+        ).status_code
+        == 200
+    )
+    assert client.post("/api/v1/auth/logout").status_code == 200
+    assert client.post("/api/v1/auth/refresh").status_code == 401
+
+
 def test_role_permissions_are_enforced_by_the_api(client: TestClient) -> None:
     def headers_for(identifier: str) -> dict[str, str]:
         auth = login(client, identifier)
@@ -485,7 +519,7 @@ def test_uploaded_dataset_becomes_scope_for_all_operations_and_live_events(
         headers={"Authorization": f"Bearer {admin_auth['access_token']}"},
     )
     assert training_without_labels.status_code == 422
-    assert "fully labeled rows" in training_without_labels.json()["detail"]
+    assert "mature rows" in training_without_labels.json()["detail"]
 
     replacement = client.post(
         "/api/v1/risk/assess/batch",
@@ -719,6 +753,9 @@ def test_admin_can_train_active_labeled_dataset_once(
                 "historical_return_rate": 0.7 if positive else 0.05,
                 "fraud_label": positive,
                 "return_label": positive,
+                "timestamp": f"2025-01-{(index % 28) + 1:02d}T{index % 24:02d}:00:00Z",
+                "fraud_label_observed_at": "2025-04-01T00:00:00Z",
+                "return_label_observed_at": "2025-04-01T00:00:00Z",
             }
         )
     uploaded = client.post(
@@ -729,7 +766,7 @@ def test_admin_can_train_active_labeled_dataset_once(
     assert uploaded.status_code == 201
     monkeypatch.setattr(
         "app.services.realtime_training.get_settings",
-        lambda: SimpleNamespace(model_dir=str(tmp_path)),
+        lambda: SimpleNamespace(model_dir=str(tmp_path), label_maturity_days=45),
     )
     trained = client.post("/api/v1/risk/train/active-dataset", headers=headers)
     assert trained.status_code == 200

@@ -2,9 +2,26 @@
 
 ## Status
 
-The production-candidate pipeline is at the **data audit gate**. No IEEE-CIS model has been trained,
-no final-test labels have been inspected for model selection, and the 1,000-row RazorShield demo
-dataset is excluded from training.
+The IEEE-CIS v2 pipeline has been trained and evaluated. Five candidates were
+compared on validation, and XGBoost was selected. The chronological split is
+70% training, 7.5% calibration, 7.5% selection and 15% locked test (88,581 rows).
+The candidate remains rejected by governance: it does not meet the requested
+precision/recall targets and is not the ordinary merchant API model. The 1,000-row
+application-test CSV remains excluded from training. Frozen reports were replayed
+successfully on 2026-08-31; see [evaluation](EVALUATION.md).
+
+Authorized reproduction commands from the repository root:
+
+```bash
+PYTHONPATH=. backend/.venv/bin/python -m ml.training.ieee_cis_audit --help
+PYTHONPATH=. backend/.venv/bin/python -m ml.training.train_ieee_cis --transactions /authorized/train_transaction.csv --identity /authorized/train_identity.csv --output-dir outputs/ieee-reproduction
+PYTHONPATH=backend:. backend/.venv/bin/python scripts/verify_submission_metrics.py --transactions /authorized/train_transaction.csv --identity /authorized/train_identity.csv --output outputs/submission/metrics.json
+```
+
+The last command requires the locally packaged trusted candidate binaries. They
+are intentionally excluded from GitHub, as are competition CSVs. Do not retrain
+or retune using the held-out replay results; a materially new selection process
+needs a new evaluation plan.
 
 ## Dataset roles
 

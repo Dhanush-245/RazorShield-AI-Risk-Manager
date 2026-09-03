@@ -54,6 +54,8 @@ class RiskAssessmentRequest(BaseModel):
     transaction_intent: str = Field(default="UNKNOWN", max_length=60)
     fraud_label: bool | None = None
     return_label: bool | None = None
+    fraud_label_observed_at: datetime | None = None
+    return_label_observed_at: datetime | None = None
 
     @field_validator("currency")
     @classmethod
@@ -113,6 +115,9 @@ class RiskAssessmentResponse(BaseModel):
     model_provenance: str | None = None
     inference_latency_ms: float | None = None
     feature_snapshot: dict[str, float | int | str | bool | None] = Field(default_factory=dict)
+    feature_provenance: dict[str, dict[str, object]] = Field(default_factory=dict)
+    graph_context: dict[str, object] = Field(default_factory=dict)
+    uncertainty: dict[str, object] = Field(default_factory=dict)
     behavior_context: dict[str, float | int | str | bool | None] = Field(default_factory=dict)
     rule_results: list[dict[str, float | int | str | bool]] = Field(default_factory=list)
     fusion_contributions: list[dict[str, float | str]] = Field(default_factory=list)

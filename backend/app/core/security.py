@@ -23,6 +23,14 @@ def identifier_digest(identifier: str) -> str:
     return hashlib.sha256(normalize_identifier(identifier).encode()).hexdigest()
 
 
+def opaque_token() -> str:
+    return secrets.token_urlsafe(48)
+
+
+def token_digest(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
 def hash_secret(secret: str) -> str:
     return password_hasher.hash(secret)
 

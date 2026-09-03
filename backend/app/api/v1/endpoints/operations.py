@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,6 +15,7 @@ from app.models.auth import Merchant, User, UserRole
 from app.models.cases import RiskCase
 from app.models.risk import RiskAssessment, Transaction
 from app.services.dataset_scope import get_active_dataset, transaction_scope
+from app.services.spike_detection import detect_spike
 
 router = APIRouter(tags=["risk-operations"])
 
@@ -45,6 +47,13 @@ def review_queue(
         .where(RiskCase.merchant_id == current.merchant_id, *transaction_scope(db, current.merchant_id))
         .order_by(desc(RiskCase.created_at))
     )
+    now = datetime.now(UTC)
+
+    def age_hours(created_at: datetime) -> float:
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=UTC)
+        return max((now - created_at).total_seconds() / 3600, 0)
+
     return [
         {
             "caseId": case.case_reference,
@@ -57,13 +66,60 @@ def review_queue(
             "reason": assessment.engine_type,
             "status": case.status,
             "assignedReviewer": user.display_name if user else None,
+            "assignedToMe": case.assigned_user_id == current.user_id,
             "caseType": case.case_type,
             "recommendation": case.recommendation,
             "humanDecision": case.human_decision,
             "createdAt": case.created_at.isoformat(),
+            "ageHours": round(age_hours(case.created_at), 2),
+            "slaStatus": "BREACHED"
+            if case.status != "RESOLVED" and age_hours(case.created_at) > 24
+            else "WITHIN_24H",
         }
         for case, transaction, assessment, user in rows
     ]
+
+
+@router.post("/reviews/{case_reference}/claim")
+def claim_review(
+    case_reference: str,
+    current: Annotated[AuthContext, Depends(require_roles(UserRole.ADMIN, UserRole.REVIEWER))],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, object]:
+    case = db.scalar(
+        select(RiskCase)
+        .join(Transaction, RiskCase.transaction_id == Transaction.id)
+        .where(
+            RiskCase.case_reference == case_reference,
+            RiskCase.merchant_id == current.merchant_id,
+            *transaction_scope(db, current.merchant_id),
+        )
+    )
+    if case is None:
+        raise HTTPException(status_code=404, detail="Review case not found")
+    if case.status == "RESOLVED":
+        raise HTTPException(status_code=409, detail="Resolved cases cannot be claimed")
+    if case.assigned_user_id not in {None, current.user_id}:
+        raise HTTPException(status_code=409, detail="Case is already assigned to another reviewer")
+    case.assigned_user_id = current.user_id
+    db.add(
+        AuditEvent(
+            merchant_id=current.merchant_id,
+            dataset_id=get_active_dataset(db, current.merchant_id).id,
+            entity_type="review_case",
+            entity_id=case.case_reference,
+            event_type="HUMAN_REVIEWER_CLAIMED",
+            actor_type="USER",
+            detail=f"Reviewer {current.user_id} claimed the case; no financial action was executed.",
+        )
+    )
+    db.commit()
+    return {
+        "caseId": case.case_reference,
+        "status": case.status,
+        "assignedUserId": current.user_id,
+        "financialActionExecuted": False,
+    }
 
 
 @router.get("/search")
@@ -199,7 +255,7 @@ def customer_360(
         "riskScore": max(assessment.score for assessment, _ in rows),
         "transactions": len(rows),
         "returns": return_events,
-        "chargebacks": sum(assessment.score >= 31 for assessment, _ in rows),
+        "chargebackCandidates": sum(assessment.score >= 31 for assessment, _ in rows),
         "devices": devices,
         "locations": locations,
         "fraudFlags": high_risk,
@@ -209,7 +265,10 @@ def customer_360(
         "elevatedReturnRiskRate": round(return_events / len(rows), 4),
         "ipAddressStatus": "NOT_COLLECTED",
         "timeline": timeline,
-        "provenance": "Derived from merchant-scoped stored assessments; chargebacks are demo candidates.",
+        "provenance": (
+            "Derived from merchant-scoped stored assessments; chargeback candidates are "
+            "score-based workflow candidates, not observed disputes."
+        ),
     }
 
 
@@ -400,11 +459,16 @@ def fraud_intelligence(
         Depends(require_roles(UserRole.ADMIN, UserRole.RISK_ANALYST)),
     ],
     db: Annotated[Session, Depends(get_db)],
+    current_minutes: Annotated[int, Query(ge=5, le=1440)] = 15,
+    baseline_hours: Annotated[int, Query(ge=1, le=168)] = 24,
 ) -> dict[str, object]:
     rows = merchant_assessments(db, current.merchant_id)
-    latest, baseline = rows[:3], rows[3:]
-    current_rate = sum(assessment.score >= 71 for assessment, _ in latest) / max(len(latest), 1)
-    baseline_rate = sum(assessment.score >= 71 for assessment, _ in baseline) / max(len(baseline), 1)
+    result = detect_spike(
+        [(transaction.occurred_at, assessment.score) for assessment, transaction in rows],
+        current_minutes=current_minutes,
+        baseline_hours=baseline_hours,
+    )
+    latest = [rows[index] for index in result.current_indexes]
     locations = Counter(transaction.location or "Unknown" for _, transaction in latest)
     devices = Counter(transaction.device_id or "Unknown" for _, transaction in latest)
     methods = Counter(transaction.payment_method or "Unknown" for _, transaction in latest)
@@ -417,20 +481,18 @@ def fraud_intelligence(
         for assessment, transaction in reversed(rows[:12])
     ]
     return {
-        "currentRate": current_rate,
-        "baselineRate": baseline_rate,
-        "score": round(max(0, current_rate - baseline_rate) * 100),
-        "flag": len(rows) >= 4 and current_rate > baseline_rate + 0.25,
-        "window": "Latest three stored events compared with prior stored events",
+        **result.as_dict(),
+        "window": f"Latest {current_minutes} event-time minutes versus the preceding {baseline_hours} hours",
         "contributors": {
             "locations": locations.most_common(5),
             "devices": devices.most_common(5),
             "paymentMethods": methods.most_common(5),
         },
         "sampleSize": len(rows),
+        "minimumSamples": {"current": 5, "baseline": 20},
         "trend": trend,
         "unavailableContributors": ["IP address", "merchant category"],
-        "limitation": "Demonstration change detector; requires a larger temporal window in production.",
+        "limitation": "A spike is emitted only when both event-time windows meet minimum support.",
     }
 
 

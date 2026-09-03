@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Annotated
 
 import networkx as nx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session, selectinload
@@ -24,6 +24,8 @@ from app.services.model_governance import ieee_cis_promotion_evidence
 from app.services.model_risk import load_models
 from app.services.operational_metrics import operational_metrics
 from app.services.policy_retrieval import retrieve_policies
+from app.services.risk_workbench import distribution_shift
+from app.services.spike_detection import detect_spike
 
 router = APIRouter(tags=["risk-operations"])
 
@@ -136,11 +138,8 @@ def overview(
 
 
 def fraud_spike_status(assessments: list[RiskAssessment]) -> str:
-    if len(assessments) < 4:
-        return "Insufficient data"
-    current = sum(item.score >= 71 for item in assessments[:3]) / 3
-    baseline = sum(item.score >= 71 for item in assessments[3:]) / max(len(assessments[3:]), 1)
-    return "Spike detected" if current > baseline + 0.25 else "Nominal"
+    result = detect_spike([(item.transaction.occurred_at, item.score) for item in assessments])
+    return result.status.replace("_", " ").title()
 
 
 @router.get("/risk/transactions")
@@ -207,6 +206,26 @@ def investigation(
         feature_snapshot = {}
     if not isinstance(feature_snapshot, dict):
         feature_snapshot = {}
+    provenance_snapshot: dict[str, dict[str, object]] = {}
+    graph_context: dict[str, object] = {}
+    if stored_assessment:
+        provenance_event = db.scalar(
+            select(AuditEvent)
+            .where(
+                AuditEvent.merchant_id == current.merchant_id,
+                AuditEvent.entity_id == stored_assessment.id,
+                AuditEvent.event_type == "DECISION_SNAPSHOT_RECORDED",
+            )
+            .order_by(desc(AuditEvent.created_at))
+        )
+        if provenance_event:
+            try:
+                snapshot_body = json.loads(provenance_event.detail).get("body", {})
+                provenance_snapshot = snapshot_body.get("featureProvenance", {})
+                graph_context = snapshot_body.get("graphContext", {})
+            except (AttributeError, TypeError, ValueError):
+                provenance_snapshot = {}
+                graph_context = {}
     amount_deviation = float(feature_snapshot.get("amount_deviation") or 0)
     historical_average = (
         round(float(transaction["amount"]) / amount_deviation, 2) if amount_deviation > 0 else None
@@ -323,7 +342,39 @@ def investigation(
                 "source": fraud_model_version,
             },
             {"label": "Data provenance", "value": str(transaction["provenance"]), "source": "model manifest"},
+            *[
+                {
+                    "label": f"Feature lineage · {name.replace('_', ' ')}",
+                    "value": str(item.get("effective")),
+                    "source": (f"{item.get('tier', 'UNKNOWN')} · {item.get('resolution', 'UNRECORDED')}"),
+                }
+                for name, item in provenance_snapshot.items()
+                if name
+                in {
+                    "customer_average_amount",
+                    "transactions_last_5_minutes",
+                    "is_new_device",
+                    "shared_device_accounts",
+                    "recipient_used_before",
+                    "recipient_risk_score",
+                    "unique_customers_to_recipient",
+                }
+            ],
         ],
+        "featureProvenance": provenance_snapshot,
+        "graphContext": graph_context,
+        "uncertainty": {
+            "status": (
+                "LEGACY_UNAVAILABLE"
+                if not provenance_snapshot
+                else (
+                    "LIMITED_HISTORY"
+                    if sum(not bool(item.get("available")) for item in provenance_snapshot.values()) >= 4
+                    else "STANDARD"
+                )
+            ),
+            "meaning": "Data sufficiency indicator, not calibrated certainty or probability of guilt.",
+        },
         "limitations": ["Bundled models were evaluated on synthetic demonstration data."],
         "factInferenceSeparation": True,
     }
@@ -384,6 +435,7 @@ def network(
 class ReviewInput(BaseModel):
     decision: str = Field(pattern="^(approve|reject|escalate|request_evidence)$")
     note: str | None = Field(default=None, max_length=2000)
+    outcome: str | None = Field(default=None, pattern="^(CONFIRMED_FRAUD|LEGITIMATE|UNDETERMINED)$")
 
 
 @router.post("/risk/reviews/{case_id}/decision")
@@ -396,6 +448,17 @@ def decide_review(
     ],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict[str, object]:
+    if payload.outcome is not None:
+        expected = {
+            "approve": "LEGITIMATE",
+            "reject": "CONFIRMED_FRAUD",
+            "escalate": "UNDETERMINED",
+            "request_evidence": "UNDETERMINED",
+        }
+        if not payload.note or not payload.note.strip():
+            raise HTTPException(422, "An evidence-based reviewer reason is required")
+        if payload.outcome != expected[payload.decision]:
+            raise HTTPException(422, "Review outcome must match the decision")
     case = db.scalar(
         select(RiskCase)
         .join(Transaction, RiskCase.transaction_id == Transaction.id, isouter=True)
@@ -457,6 +520,42 @@ def decide_review(
         for index, (event_type, detail) in enumerate(event_specs)
     ]
     db.add_all(events)
+    if payload.outcome is not None:
+        assessment = db.scalar(
+            select(RiskAssessment)
+            .where(RiskAssessment.transaction_id == case.transaction_id)
+            .order_by(desc(RiskAssessment.created_at))
+        )
+        evidence = json.dumps(
+            {
+                "outcome": payload.outcome,
+                "reason": payload.note.strip(),
+                "reviewerId": current.user_id,
+                "modelScore": assessment.score if assessment else None,
+                "modelVersion": assessment.engine_version if assessment else None,
+                "modelRisk": assessment.risk_level if assessment else None,
+                "disagreesWithHighRisk": bool(
+                    assessment and assessment.score >= 71 and payload.outcome == "LEGITIMATE"
+                ),
+                "labelStatus": "REVIEWER_ASSERTION_NOT_EXTERNAL_GROUND_TRUTH",
+                "automaticRetraining": False,
+            }
+        )
+        db.add_all(
+            [
+                AuditEvent(
+                    merchant_id=current.merchant_id,
+                    dataset_id=dataset_id,
+                    entity_type="review_case",
+                    entity_id=case.case_reference,
+                    event_type=event_type,
+                    actor_type="USER",
+                    detail=evidence,
+                    created_at=now + timedelta(microseconds=len(events) + index),
+                )
+                for index, event_type in enumerate(["REVIEW_FEEDBACK_RECORDED", "MODEL_FEEDBACK_MONITORING"])
+            ]
+        )
     db.commit()
     decision_event = events[1]
     db.refresh(decision_event)
@@ -475,7 +574,11 @@ def audit_view(event: AuditEvent) -> dict[str, object]:
         "timestamp": event.created_at.isoformat(),
         "event": event.event_type.replace("_", " ").title(),
         "actor": event.actor_type,
-        "note": event.detail,
+        "note": (
+            "Risk-input snapshot recorded; inspect the transaction's Data → decision panel for details."
+            if event.event_type == "DECISION_SNAPSHOT_RECORDED"
+            else event.detail
+        ),
         "decisionVersion": "human-review-v1" if event.actor_type == "USER" else "risk-platform-v1",
     }
 
@@ -510,13 +613,35 @@ def model_monitoring(
         for assessment in latest_assessments(db, current.merchant_id)
         if assessment.inference_latency_ms is not None
     ]
-    assessments = latest_assessments(db, current.merchant_id)
-    feature_status = {
-        "transactionAmount": "INSUFFICIENT_DATA",
-        "deviceDistribution": "INSUFFICIENT_DATA",
-        "locationDistribution": "INSUFFICIENT_DATA",
-        "highRiskRate": "INSUFFICIENT_DATA",
+    assessments = list(reversed(latest_assessments(db, current.merchant_id)[-500:]))
+    midpoint = len(assessments) // 2
+    reference, recent = assessments[:midpoint], assessments[midpoint:]
+
+    def values(items: list[RiskAssessment], feature: str) -> list[object]:
+        if feature == "transactionAmount":
+            return [float(item.transaction.amount) for item in items]
+        if feature == "deviceDistribution":
+            return [item.transaction.device_id or "NOT_COLLECTED" for item in items]
+        if feature == "locationDistribution":
+            return [item.transaction.location or "NOT_COLLECTED" for item in items]
+        return [item.score >= 71 for item in items]
+
+    drift_details = {
+        feature: distribution_shift(
+            values(reference, feature),
+            values(recent, feature),
+            feature != "transactionAmount",
+        )
+        for feature in (
+            "transactionAmount",
+            "deviceDistribution",
+            "locationDistribution",
+            "highRiskRate",
+        )
     }
+    feature_status = {feature: detail["status"] for feature, detail in drift_details.items()}
+    severity = {"INSUFFICIENT_DATA": -1, "LOW": 0, "MEDIUM": 1, "HIGH": 2}
+    overall_status = max(feature_status.values(), key=lambda value: severity[value])
     telemetry = operational_metrics.snapshot()
     return {
         "models": {name: manifest[name] for name in ("fraud", "anomaly", "fusion", "return")},
@@ -533,10 +658,17 @@ def model_monitoring(
             ),
         },
         "drift": {
-            "status": "INSUFFICIENT_LIVE_LABELS",
+            "status": overall_status,
             "sampleSize": len(assessments),
-            "minimumRequired": 30,
+            "minimumRequired": 60,
+            "referenceSamples": len(reference),
+            "recentSamples": len(recent),
             "features": feature_status,
+            "details": drift_details,
+            "method": (
+                "Older half versus newer half of up to 500 active-dataset events; "
+                "PSI for amount and total-variation distance for categorical features."
+            ),
         },
         "disclaimer": (
             "Evaluation uses the active merchant-labeled dataset's held-out split."
@@ -696,19 +828,24 @@ def spike(
         Depends(require_roles(UserRole.ADMIN, UserRole.RISK_ANALYST)),
     ],
     db: Annotated[Session, Depends(get_db)],
+    current_minutes: Annotated[int, Query(ge=5, le=1440)] = 15,
+    baseline_hours: Annotated[int, Query(ge=1, le=168)] = 24,
 ) -> dict[str, object]:
     assessments = latest_assessments(db, current.merchant_id)
-    current_rate = sum(item.score >= 71 for item in assessments[:3]) / max(min(3, len(assessments)), 1)
-    baseline_items = assessments[3:]
-    baseline_rate = sum(item.score >= 71 for item in baseline_items) / max(len(baseline_items), 1)
+    result = detect_spike(
+        [(item.transaction.occurred_at, item.score) for item in assessments],
+        current_minutes=current_minutes,
+        baseline_hours=baseline_hours,
+    )
+    current_items = [assessments[index] for index in result.current_indexes]
     return {
-        "currentRate": current_rate,
-        "baselineRate": baseline_rate,
-        "flag": current_rate > baseline_rate + 0.25,
-        "window": "latest 3 active dataset events",
-        "contributors": Counter(
-            signal.code for item in assessments[:3] for signal in item.signals
-        ).most_common(5),
+        **result.as_dict(),
+        "window": f"Latest {current_minutes} event-time minutes versus the preceding {baseline_hours} hours",
+        "contributors": Counter(signal.code for item in current_items for signal in item.signals).most_common(
+            5
+        ),
+        "minimumSamples": {"current": 5, "baseline": 20},
+        "limitation": "A spike is emitted only when both event-time windows meet minimum support.",
     }
 
 

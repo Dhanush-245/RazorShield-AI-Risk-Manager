@@ -6,6 +6,31 @@ RazorShield AI is a defense-only merchant risk operations demo for Razorpay Buil
 
 > Data and metrics in the bundled demo are **synthetic**. A risk score is decision support, not proof of fraud. The agent cannot execute financial actions.
 
+## Buildathon submission kit
+
+### Risk-operations upgrade
+
+New **Risk simulator** and **Risk operations** navigation adds non-saving what-if experiments,
+counterfactual sensitivity, model health/drift, threshold/capacity/business-cost analysis and admin property tests.
+Each investigation now has an evidence timeline, prior-only behavioral fingerprint, human-versus-model feedback
+and data-to-decision replay. See the [technical decision log](docs/decisions.md) and
+[what broke / how we fixed it](docs/failures-and-fixes.md).
+
+The latest [five-minute recording script](docs/submission/RISK_OPERATIONS_NARRATION.md) starts at authentication,
+uses the original synthetic voice and has **no bottom narration captions**. New operations tests run with the
+ordinary browser suite; paced recording is explicitly opt-in. No ML artifacts or live merchant datasets are changed.
+
+Start with the [submission checklist](docs/submission/README.md),
+[authentication-first live tour and own-voice narration](docs/submission/LIVE_TOUR_NARRATION.md), and
+[12-field application answer sheet](docs/submission/APPLICATION_ANSWERS.md).
+The ordinary demo and real-data candidate are deliberately distinguished in the
+[reproducible evaluation report](docs/EVALUATION.md). Public deployment is not
+part of this local demo's acceptance claim.
+
+![Synthetic merchant risk dashboard](docs/submission/screenshots/dashboard.png)
+
+See the [sender/receiver evidence capture](docs/submission/screenshots/sender-receiver.png).
+
 ## Run locally
 
 Requirements: Python 3.12 recommended (3.11+ supported by the project), Node 22+, pnpm 10+.
@@ -56,10 +81,18 @@ Open the UI at `http://localhost:5173`; API docs are at `http://localhost:8000/d
 backend/.venv/bin/ruff format --check backend ml
 backend/.venv/bin/ruff check backend ml
 PYTHONPATH=backend:. backend/.venv/bin/python -m pytest backend/tests ml/tests
+PYTHONPATH=backend:. backend/.venv/bin/python scripts/verify_submission_metrics.py --output outputs/submission/metrics.json
 pnpm run typecheck:libs
 pnpm --filter @workspace/razorshield-ai typecheck
 pnpm --filter @workspace/razorshield-ai build
+RAZORSHIELD_E2E_UI_PORT=5175 RAZORSHIELD_E2E_API_PORT=5003 pnpm --filter @workspace/razorshield-ai e2e
 ```
+
+Browser tests create an isolated UUID-named SQLite database and never reuse a
+running application server. Choose free ports; the optional
+`RAZORSHIELD_E2E_RECORD=1` records a silent rehearsal in Playwright test results.
+For real PostgreSQL regressions, set `RAZORSHIELD_POSTGRES_TEST_URL` to a disposable
+test cluster with CREATEDB permission; see [migration verification](docs/verification/postgresql-enum-migration-2026-08-31.md).
 
 See [architecture](docs/ARCHITECTURE.md), [API](docs/API.md), [model card](docs/MODEL_CARD.md), and [deployment](docs/DEPLOYMENT.md).
 

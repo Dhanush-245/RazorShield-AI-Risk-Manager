@@ -23,6 +23,10 @@ class LoginResponse(BaseModel):
     user: AuthUser
 
 
+class RefreshResponse(LoginResponse):
+    session_rotated: bool = True
+
+
 class ForgotPasswordRequest(BaseModel):
     identifier: str = Field(min_length=3, max_length=254)
 

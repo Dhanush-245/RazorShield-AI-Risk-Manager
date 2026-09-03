@@ -440,6 +440,26 @@
     border-color 0.18s ease,
     transform 0.18s ease;
 }
+.risk-workbench .bench-button {
+  min-height: 44px;
+}
+
+.risk-workbench .bench-button[aria-pressed="true"] {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.risk-workbench .bench-button[aria-pressed="true"]:hover {
+  color: var(--canvas);
+  background: var(--teal);
+}
+
+.risk-workbench .bench-button:focus-visible,
+.risk-workbench summary:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+
 .bench-button:hover {
   border-color: var(--rust);
   background: var(--rust);

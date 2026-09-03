@@ -4,13 +4,15 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects.postgresql import ENUM
 
 revision: str = "20260823_0002"
 down_revision: str | None = "20260823_0001"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-user_role = sa.Enum("ADMIN", "RISK_ANALYST", "REVIEWER", "VIEWER", name="user_role")
+# This revision owns enum DDL explicitly; table creation must not create it again.
+user_role = ENUM("ADMIN", "RISK_ANALYST", "REVIEWER", "VIEWER", name="user_role", create_type=False)
 
 
 def upgrade() -> None:

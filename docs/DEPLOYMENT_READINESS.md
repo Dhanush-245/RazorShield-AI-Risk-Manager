@@ -1,5 +1,9 @@
 # RazorShield deployment readiness — 2026-08-29
 
+> Historical snapshot. The [2026-08-31 submission validation](verification/submission-validation-2026-08-31.md)
+> supersedes the local test counts and PostgreSQL availability below: PostgreSQL 16
+> now passes locally. Production and remote CI approval remain separate and unclaimed.
+
 This report separates locally verified evidence, CI-enforced checks, and external production
 sign-off. A candidate or local pass is not represented as production approval.
 
