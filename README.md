@@ -1,5 +1,8 @@
 # RazorShield AI
 
+[![RazorShield CI](https://github.com/Dhanush-245/RazorShield-AI-Risk-Manager/actions/workflows/ci.yml/badge.svg)](https://github.com/Dhanush-245/RazorShield-AI-Risk-Manager/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Detect. Investigate. Explain. Protect.**
 
 RazorShield AI is a defense-only merchant risk operations demo for Razorpay Buildathon Track 02. It joins authenticated merchant operations, trained/versioned risk models, explainable scoring, graph signals, returns and chargeback support, bounded investigation, human review, and audit history in one working application.
@@ -16,9 +19,10 @@ Each investigation now has an evidence timeline, prior-only behavioral fingerpri
 and data-to-decision replay. See the [technical decision log](docs/decisions.md) and
 [what broke / how we fixed it](docs/failures-and-fixes.md).
 
-The latest [five-minute recording script](docs/submission/RISK_OPERATIONS_NARRATION.md) starts at authentication,
-uses the original synthetic voice and has **no bottom narration captions**. New operations tests run with the
-ordinary browser suite; paced recording is explicitly opt-in. No ML artifacts or live merchant datasets are changed.
+The final [native-1080p narration and timing](docs/submission/FINAL_1080P_NARRATION.md)
+uses the preferred synthetic voice and has no bottom captions. Its paced browser
+rehearsal is explicitly opt-in, runs against an isolated database, and does not
+change ML artifacts or a running merchant workspace.
 
 Start with the [submission checklist](docs/submission/README.md),
 [authentication-first live tour and own-voice narration](docs/submission/LIVE_TOUR_NARRATION.md), and
@@ -30,6 +34,45 @@ part of this local demo's acceptance claim.
 ![Synthetic merchant risk dashboard](docs/submission/screenshots/dashboard.png)
 
 See the [sender/receiver evidence capture](docs/submission/screenshots/sender-receiver.png).
+
+### Reproduce the native 1080p demo
+
+Install the project first, then run the opt-in Chrome recording with a synthetic
+CSV containing exactly 1,000 rows. The path is local and is never committed.
+
+```bash
+RAZORSHIELD_RECORD_RECRUITER_PITCH=1 \
+RAZORSHIELD_RECRUITER_PITCH_PACED=1 \
+RAZORSHIELD_E2E_RECORD=1 \
+RAZORSHIELD_E2E_VIDEO_WIDTH=1920 \
+RAZORSHIELD_E2E_VIDEO_HEIGHT=1080 \
+RAZORSHIELD_E2E_CHANNEL=chrome \
+RAZORSHIELD_E2E_UI_PORT=5175 \
+RAZORSHIELD_E2E_API_PORT=5003 \
+RAZORSHIELD_RECRUITER_DATASET=/absolute/path/to/transactions.csv \
+pnpm --filter @workspace/razorshield-ai exec playwright test \
+  e2e/recruiter-pitch.spec.ts --project=chromium
+```
+
+Before another Playwright run clears `test-results`, build the approved silent
+5:10 timeline and add the local synthetic narration:
+
+```bash
+python3 scripts/build_recruiter_video_1080p.py \
+  --recording artifacts/razorshield-ai/test-results/recruiter-pitch-five-minute-recruiter-pitch-chromium/video.webm \
+  --output outputs/submission/razorshield-final-1080p-silent.mp4
+
+python3 scripts/narrate_operations_demo.py \
+  --video outputs/submission/razorshield-final-1080p-silent.mp4 \
+  --output outputs/submission/razorshield-final-1080p.mp4 \
+  --duration 310 --fill-chapters \
+  --script docs/submission/FINAL_1080P_NARRATION.md
+```
+
+This requires FFmpeg/ffprobe and, for narration, macOS `say`. Generated media,
+browser traces, databases, secrets, raw licensed datasets, and local model binaries
+remain excluded from Git. Publish the reviewed pitch video separately as an unlisted
+video and place its URL in the application form.
 
 ## Run locally
 

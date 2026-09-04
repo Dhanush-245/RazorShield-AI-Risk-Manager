@@ -62,10 +62,9 @@ approved production fraud detector.
 https://github.com/Dhanush-245/RazorShield-AI-Risk-Manager
 
 **Verified PUBLIC on 2026-08-31** using GitHub's repository API after the owner
-changed visibility. The latest local validation and recording changes have not
-been pushed. Review the diff and repository history for secrets and licensing,
-and reconcile existing remote changes before publishing updates. Public visibility
-does not establish that remote CI passes.
+changed visibility. Review the latest GitHub Actions result, repository history,
+secret scan, and dataset licensing before submitting. Public visibility alone does
+not establish that the newest commit passes remote CI.
 
 ### 11. Five-minute pitch video
 
@@ -73,10 +72,11 @@ does not establish that remote CI passes.
 
 Local materials already prepared:
 
-- `outputs/submission/razorshield-recruiter-pitch-final-v2.mp4`: latest five-minute
-  continuous product recording, ordered for recruiter evaluation, with disclosed
-  AI narration using the preferred original voice and no bottom caption strip.
-- [Exact recruiter narration and timing](RECRUITER_PITCH_NARRATION.md).
+- `outputs/submission/razorshield-final-submission-1080p-natural-voice.mp4`: latest
+  local native-1080p product recording with disclosed AI narration, synchronized
+  values, natural pacing, and no bottom caption strip. Generated media is excluded
+  from Git and must be hosted separately.
+- [Exact final narration and timing](FINAL_1080P_NARRATION.md).
 - `outputs/submission/razorshield-authentication-feature-tour-no-captions.mp4`:
   earlier authentication-first delivery, retaining the original synthetic voice without the bottom caption strip.
 - `outputs/submission/razorshield-authentication-feature-tour-original-voice.mp4`:

@@ -1,4 +1,39 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+
+test.beforeAll(async ({ request }) => {
+  const datasetPath = process.env.RAZORSHIELD_RECRUITER_DATASET;
+  if (!datasetPath) return;
+
+  const [header, ...lines] = readFileSync(datasetPath, "utf8")
+    .trim()
+    .split(/\r?\n/);
+  const columns = header.split(",");
+  const transactions = lines.map((line) =>
+    Object.fromEntries(
+      line.split(",").map((value, index) => [columns[index], value]),
+    ),
+  );
+
+  const login = await request.post("/api/v1/auth/login", {
+    data: {
+      identifier: "admin@razorshield.demo",
+      password: "Admin-RazorShield-2026!",
+    },
+  });
+  expect(login.status()).toBe(200);
+  const { access_token: accessToken } = await login.json();
+  const upload = await request.post("/api/v1/risk/assess/batch", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    data: {
+      dataset_name: "RazorShield 1,000-transaction validation dataset",
+      transactions,
+    },
+    timeout: 180_000,
+  });
+  expect(upload.status()).toBe(201);
+  expect((await upload.json()).processed).toBe(1_000);
+});
 
 test("five-minute recruiter pitch", async ({ page }, testInfo) => {
   test.skip(
@@ -10,7 +45,10 @@ test("five-minute recruiter pitch", async ({ page }, testInfo) => {
   // five-minute export, which is normalized and verified after recording.
   test.setTimeout(1_200_000);
   page.setDefaultTimeout(15_000);
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize({
+    width: Number(process.env.RAZORSHIELD_E2E_VIDEO_WIDTH ?? 1440),
+    height: Number(process.env.RAZORSHIELD_E2E_VIDEO_HEIGHT ?? 1000),
+  });
 
   const paced = process.env.RAZORSHIELD_RECRUITER_PITCH_PACED !== "0";
   const durations = paced
@@ -54,8 +92,22 @@ test("five-minute recruiter pitch", async ({ page }, testInfo) => {
     await expect(
       page.getByText("Risk overview", { exact: true }),
     ).toBeVisible();
+    if (process.env.RAZORSHIELD_RECRUITER_DATASET) {
+      await expect(
+        page.getByText("Transactions analyzed", { exact: true }).locator(".."),
+      ).toContainText("1K");
+    }
+    await page
+      .getByRole("heading", { name: "Risk intensity", exact: true })
+      .scrollIntoViewIfNeeded();
     await expect(
-      page.getByRole("textbox", { name: "Password Show password", exact: true }),
+      page.getByLabel("Risk trend chart", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("textbox", {
+        name: "Password Show password",
+        exact: true,
+      }),
     ).toHaveCount(0);
   });
 
@@ -164,6 +216,14 @@ test("five-minute recruiter pitch", async ({ page }, testInfo) => {
       .scrollIntoViewIfNeeded();
     await expect(
       page.getByRole("heading", { name: "Signal contribution", exact: true }),
+    ).toBeVisible();
+    if (paced) await page.waitForTimeout(12_000);
+    await visit("/network", "Risk network");
+    await page
+      .getByText("Relationship map", { exact: true })
+      .scrollIntoViewIfNeeded();
+    await expect(
+      page.getByText(/active links/, { exact: false }).first(),
     ).toBeVisible();
   });
 
@@ -274,7 +334,10 @@ test("five-minute recruiter pitch", async ({ page }, testInfo) => {
       }),
     ).toBeVisible();
     const confusion = page
-      .getByRole("heading", { name: "Locked-test confusion matrix", exact: true })
+      .getByRole("heading", {
+        name: "Locked-test confusion matrix",
+        exact: true,
+      })
       .locator("..");
     await expect(confusion).toContainText("TN 9,751");
     await expect(confusion).toContainText("FP 1,077");
@@ -313,8 +376,7 @@ test("five-minute recruiter pitch", async ({ page }, testInfo) => {
   });
 
   const elapsed = Date.now() - started;
-  if (paced && elapsed < 300_000)
-    await page.waitForTimeout(300_000 - elapsed);
+  if (paced && elapsed < 300_000) await page.waitForTimeout(300_000 - elapsed);
   testInfo.attach("chapters", {
     body: Buffer.from(JSON.stringify(chapters, null, 2)),
     contentType: "application/json",

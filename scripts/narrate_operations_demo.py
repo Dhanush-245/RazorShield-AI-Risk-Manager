@@ -37,6 +37,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--video", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--duration", type=int, default=300)
+    parser.add_argument(
+        "--fill-chapters",
+        action="store_true",
+        help="Gently stretch narration to fill each chapter and avoid trailing gaps.",
+    )
     parser.add_argument(
         "--script",
         type=Path,
@@ -47,8 +53,10 @@ def main():
     if args.output.exists() or report.exists():
         parser.error("Choose a new output filename; existing artifacts are preserved")
     source = probe(args.video)
-    if abs(float(source["format"]["duration"]) - 300) > 0.1:
-        parser.error("Expected a verified five-minute source")
+    if args.duration <= 0:
+        parser.error("Duration must be positive")
+    if abs(float(source["format"]["duration"]) - args.duration) > 0.1:
+        parser.error(f"Expected a verified {args.duration}-second source")
     script = args.script.read_text()
     sections = []
     for sm, ss, em, es, title, text in re.findall(
@@ -62,8 +70,10 @@ def main():
                 "text": " ".join(text.split()),
             }
         )
-    if not sections or sections[-1]["end"] != 300:
-        raise ValueError("Expected contiguous narration sections covering five minutes")
+    if not sections or sections[-1]["end"] != args.duration:
+        raise ValueError(
+            f"Expected contiguous narration sections covering {args.duration} seconds"
+        )
     work = Path(tempfile.mkdtemp(prefix="razorshield-operations-audio-"))
     parts = []
     for index, section in enumerate(sections):
@@ -91,6 +101,16 @@ def main():
                 )
         else:
             raise ValueError(f"Narration does not fit chapter {index + 1}")
+        audio_filter = "adelay=350,apad"
+        rendered_duration = duration
+        if args.fill_chapters:
+            rendered_duration = available
+            tempo = duration / rendered_duration
+            if not 0.5 <= tempo <= 2:
+                raise ValueError(
+                    f"Chapter {index + 1} cannot be stretched at a natural pace"
+                )
+            audio_filter = f"atempo={tempo:.8f},adelay=350,apad"
         run(
             "ffmpeg",
             "-v",
@@ -99,7 +119,7 @@ def main():
             "-i",
             str(raw),
             "-af",
-            "adelay=350,apad",
+            audio_filter,
             "-t",
             str(section["end"] - section["start"]),
             "-ar",
@@ -108,7 +128,11 @@ def main():
             "1",
             str(part),
         )
-        section.update(rate=rate, spokenSeconds=duration)
+        section.update(
+            rate=rate,
+            spokenSeconds=duration,
+            renderedSpeechSeconds=rendered_duration,
+        )
         parts.append(part)
         print(
             f"Narration {index + 1}/{len(sections)}: {duration:.1f}s at {rate} wpm",
@@ -157,7 +181,7 @@ def main():
         "-b:a",
         "192k",
         "-t",
-        "300",
+        str(args.duration),
         "-movflags",
         "+faststart",
         str(args.output),

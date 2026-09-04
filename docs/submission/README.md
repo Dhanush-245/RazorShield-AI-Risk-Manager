@@ -9,10 +9,11 @@ requirements in the [application form](https://forms.gle/d9r2gvxp8cmoZhon9).
 
 ## Ready locally
 
-- **Latest:** [Five-minute recruiter pitch](RECRUITER_PITCH_NARRATION.md), following the requested
-  problem → architecture → product → ML → security → debugging sequence, with the preferred
-  synthetic voice and no bottom captions. The verified local file is
-  `outputs/submission/razorshield-recruiter-pitch-final-v2.mp4`.
+- **Latest:** [Native-1080p recruiter pitch](FINAL_1080P_NARRATION.md), following
+  dashboard → architecture → suspicious/legitimate comparison → counterfactual →
+  evidence-bound investigation → human review/audit → measured ML/business impact →
+  security → debugging. It uses the preferred synthetic voice and no bottom captions.
+  The generated local file is intentionally excluded from Git.
 - [Recruiter-pitch media verification](../verification/recruiter-pitch-2026-09-03.md).
 - [Earlier risk-operations demo and narration](RISK_OPERATIONS_NARRATION.md).
 - [Professional-upgrade coverage / technical decisions](../decisions.md) and [failures and fixes](../failures-and-fixes.md).
@@ -37,7 +38,7 @@ requirements in the [application form](https://forms.gle/d9r2gvxp8cmoZhon9).
    files, merchant databases, `.env`, tokens or browser traces containing tokens.
 2. GitHub Actions run `33718111412` passed migrations, backend/ML tests, dependency
    audits, TypeScript/build checks, browser E2E, and both Docker builds on commit
-   `f21a892`. The new recruiter-pitch source changes remain local and unpushed.
+   `f21a892`. Re-check the workflow attached to the newest commit before submission.
 3. Review the new **authentication-first continuous browser tour**, which uses
    visible recording captions. A separate `-narrated.mp4` now adds AI-generated
    narration at the owner's request; the silent original remains available.

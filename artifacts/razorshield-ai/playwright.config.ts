@@ -5,9 +5,15 @@ import path from "node:path";
 
 const uiPort = Number(process.env.RAZORSHIELD_E2E_UI_PORT ?? 5173);
 const apiPort = Number(process.env.RAZORSHIELD_E2E_API_PORT ?? 5001);
+const videoWidth = Number(process.env.RAZORSHIELD_E2E_VIDEO_WIDTH ?? 1440);
+const videoHeight = Number(process.env.RAZORSHIELD_E2E_VIDEO_HEIGHT ?? 1000);
 for (const port of [uiPort, apiPort]) {
   if (!Number.isInteger(port) || port < 1024 || port > 65535)
     throw new Error("Invalid E2E port");
+}
+for (const dimension of [videoWidth, videoHeight]) {
+  if (!Number.isInteger(dimension) || dimension < 480 || dimension > 3840)
+    throw new Error("Invalid E2E video dimension");
 }
 const database = path.join(tmpdir(), `razorshield-e2e-${randomUUID()}.db`);
 
@@ -25,7 +31,7 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${uiPort}`,
     video:
       process.env.RAZORSHIELD_E2E_RECORD === "1"
-        ? { mode: "on", size: { width: 1440, height: 1000 } }
+        ? { mode: "on", size: { width: videoWidth, height: videoHeight } }
         : "off",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
@@ -33,7 +39,13 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        channel:
+          process.env.RAZORSHIELD_E2E_CHANNEL === "chrome"
+            ? "chrome"
+            : undefined,
+      },
     },
   ],
   webServer: [
